@@ -287,13 +287,13 @@ namespace Edgegap.Gen2SDK
 
             Gen2Api = new Api<T, A>(Handler, AuthToken, BaseUrl);
 
+            _SubscribeLogger(Monitor, "Monitor");
+            _SubscribeLogger(Ticket, "Ticket", LogTicketUpdates);
+            _SubscribeLogger(Assignment, "Assignment", LogAssignmentUpdates);
+
             Gen2Api.GetMonitor(
                 (MonitorResponseDTO monitor, UnityWebRequest request) =>
                 {
-                    _SubscribeLogger(Monitor, "Monitor");
-                    _SubscribeLogger(Ticket, "Ticket", LogTicketUpdates);
-                    _SubscribeLogger(Assignment, "Assignment", LogAssignmentUpdates);
-
                     _SubscribePlayerPrefSave(Ticket, "Ticket", PLAYER_PREFS_KEY_TICKET);
                     _SubscribePlayerPrefSave(Assignment, "Assignment", PLAYER_PREFS_KEY_ASSIGNMENT);
 
@@ -629,3 +629,4 @@ namespace Edgegap.Gen2SDK
         #endregion
     }
 }
+
