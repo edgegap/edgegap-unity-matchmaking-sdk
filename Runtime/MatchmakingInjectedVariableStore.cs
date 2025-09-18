@@ -49,7 +49,6 @@ namespace Edgegap.Gen2SDK
             try
             {
                 IDictionary envs = Environment.GetEnvironmentVariables();
-                MatchProfile = envs["MM_MATCH_PROFILE"].ToString();
                 TicketsData = new Dictionary<string, T>();
 
                 foreach (DictionaryEntry envEntry in envs)
@@ -67,6 +66,10 @@ namespace Edgegap.Gen2SDK
                             JsonConvert.DeserializeObject<T>(
                                 envEntry.Value.ToString()
                             );
+                    }
+                    else if (key == "MM_MATCH_PROFILE") 
+                    {
+                        MatchProfile = envEntry.Value.ToString();
                     }
                     else if (key == "MM_TICKET_IDS")
                     {
@@ -106,18 +109,7 @@ namespace Edgegap.Gen2SDK
 
                 foreach (string id in TicketIds)
                 {
-                    bool match = false;
-
-                    foreach (string dataKey in TicketsData.Keys)
-                    {
-                        if (dataKey.Contains(id))
-                        {
-                            match = true;
-                            break;
-                        }
-                    }
-
-                    if (!match)
+                    if (!TicketsData.ContainsKey(id))
                     {
                         L._Warn($"Couldn't find injected ticket body for injected ticket ID {id}.");
                     }

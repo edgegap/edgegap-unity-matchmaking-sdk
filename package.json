@@ -14,6 +14,11 @@
             "displayName": "Simple Example",
             "description": "Minimal Recommended Gen2 Example.",
             "path": "Samples~/SimpleExample"
+        },
+        {
+            "displayName": "Advanced Example",
+            "description": "Advanced Gen2 Example.",
+            "path": "Samples~/AdvancedExample"
         }
     ],
     "dependencies": {
