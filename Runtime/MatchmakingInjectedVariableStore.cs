@@ -33,8 +33,8 @@ namespace Edgegap.Gen2SDK
         }
     }
 
-    public class MatchmakingInjectedVariableStore<T, E, I>
-        where T : TicketsRequestDTO
+    public class MatchmakingInjectedVariableStore<T, A, E, I>
+        where T : TicketsRequestDTO<A>
     {
         public List<string> TicketIds { get; private set; }
         public Dictionary<string, T> TicketsData { get; private set; }
