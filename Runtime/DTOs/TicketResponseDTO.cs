@@ -25,6 +25,9 @@ namespace Edgegap.Gen2SDK
         [JsonProperty("group_id")]
         public string? GroupID;
 
+        [JsonProperty("team_id")]
+        public string? TeamID;
+
         [JsonProperty("assignment")]
         public AssignmentDTO? Assignment;
 

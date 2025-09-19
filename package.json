@@ -1,13 +1,13 @@
 {
     "name": "com.edgegap.unity-gen2-sdk",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "displayName": "Edgegap Gen2 SDK",
     "description": "Get started quickly with Edgegap Gen2 Matchmaking.",
     "unity": "2021.3",
     "unityRelease": "0f1",
-    "documentationUrl": "https://docs.edgegap.com/docs/gen2-matchmaker",
+    "documentationUrl": "https://docs.edgegap.com/learn/matchmaking/getting-started-with-gen2",
     "hideInEditor": false,
-    "changelogUrl": "https://github.com/edgegap/edgegap-unity-gen2-sdk/releases",
+    "changelogUrl": "https://docs.edgegap.com/learn/matchmaking/gen2-matchmaker-in-depth#changelog",
     "licensesUrl": "https://choosealicense.com/licenses/mit/",
     "samples": [
         {

@@ -34,7 +34,6 @@ public class Gen2ClientHandlerExample : MonoBehaviour
     public bool LogPollingUpdates = false;
     #endregion
 
-    // todo replace with CustomTicketsRequestDTO
     public Client<MyTicketsRequestDTO, MyTicketsAttributes> Gen2Client;
 
     private string State;

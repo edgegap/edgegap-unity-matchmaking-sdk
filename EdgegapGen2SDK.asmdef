@@ -1,5 +1,5 @@
 {
-    "name": "Edgegap.Gen2.SDK, Version=1.1.0, Culture=neutral",
+    "name": "Edgegap.Gen2.SDK",
     "rootNamespace": "",
     "references": [],
     "includePlatforms": [],
