@@ -1,6 +1,6 @@
 {
     "name": "com.edgegap.unity-gen2-sdk",
-    "version": "1.1.1",
+    "version": "2.0.1",
     "displayName": "Edgegap Gen2 SDK",
     "description": "Get started quickly with Edgegap Gen2 Matchmaking.",
     "unity": "2021.3",
