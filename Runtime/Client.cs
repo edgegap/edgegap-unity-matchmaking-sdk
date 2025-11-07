@@ -9,7 +9,7 @@ using UnityEngine.Networking;
 using Ping = UnityEngine.Ping;
 using Random = UnityEngine.Random;
 
-namespace Edgegap.Gen2SDK
+namespace Edgegap.Matchmaking
 {
     using L = Logger;
 
@@ -629,4 +629,3 @@ namespace Edgegap.Gen2SDK
         #endregion
     }
 }
-

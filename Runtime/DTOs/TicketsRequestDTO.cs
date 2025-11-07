@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace Edgegap.Gen2SDK
+namespace Edgegap.Matchmaking
 {
     public abstract class TicketsRequestDTO<A>
     {

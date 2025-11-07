@@ -1,25 +1,25 @@
 using System.Collections.Generic;
-using Edgegap.Gen2SDK;
+using Edgegap.Matchmaking;
 using UnityEngine;
 using UnityEngine.Networking;
-using MyTicketsAttributes = Edgegap.Gen2SDK.LatenciesAttributesDTO;
-using MyTicketsRequestDTO = Edgegap.Gen2SDK.SimpleTicketsRequestDTO;
+using MyTicketsAttributes = Edgegap.Matchmaking.LatenciesAttributesDTO;
+using MyTicketsRequestDTO = Edgegap.Matchmaking.SimpleTicketsRequestDTO;
 
 // todo replace SimpleTicketsRequestDTO with CustomTicketsRequestDTO
 // todo replace LatenciesAttributesDTO with CustomTicketsAttributes
-public class Gen2ClientHandlerExample : MonoBehaviour
+public class MatchmakingClientHandlerExample : MonoBehaviour
 {
-    public static Gen2ClientHandlerExample Instance { get; private set; }
+    public static MatchmakingClientHandlerExample Instance { get; private set; }
 
-    #region Gen2Client Configuration
+    #region Matchmaking Configuration
     public string BaseUrl;
     public string AuthToken;
 
     public string ClientVersion = "1.0.0";
     public bool SaveStateInPlayerPrefs = true;
-    public string PLAYER_PREFS_KEY_VERSION = "EdgegapGen2ClientVersion";
-    public string PLAYER_PREFS_KEY_TICKET = "EdgegapGen2ClientTicket";
-    public string PLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapGen2ClientAssignment";
+    public string PLAYER_PREFS_KEY_VERSION = "EdgegapMatchmakingClientVersion";
+    public string PLAYER_PREFS_KEY_TICKET = "EdgegapMatchmakingClientTicket";
+    public string PLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapMatchmakingClientAssignment";
 
     public int RequestTimeoutSeconds = 3;
     public float PollingBackoffSeconds = 1f;
@@ -34,7 +34,7 @@ public class Gen2ClientHandlerExample : MonoBehaviour
     public bool LogPollingUpdates = false;
     #endregion
 
-    public Client<MyTicketsRequestDTO, MyTicketsAttributes> Gen2Client;
+    public Client<MyTicketsRequestDTO, MyTicketsAttributes> MatchmakingClient;
 
     private string State;
 
@@ -54,8 +54,8 @@ public class Gen2ClientHandlerExample : MonoBehaviour
 
     public void Start()
     {
-        // configure Gen2
-        Gen2Client = new Client<MyTicketsRequestDTO, MyTicketsAttributes>(
+        // configure Matchmaking
+        MatchmakingClient = new Client<MyTicketsRequestDTO, MyTicketsAttributes>(
             this,
             BaseUrl,
             AuthToken,
@@ -73,8 +73,8 @@ public class Gen2ClientHandlerExample : MonoBehaviour
             LogPollingUpdates
         );
 
-        // initialize Gen2
-        Gen2Client.Initialize(
+        // initialize Matchmaking
+        MatchmakingClient.Initialize(
             // handle service monitoring
             (
                 Observable<MonitorResponseDTO> monitor,
@@ -87,13 +87,13 @@ public class Gen2ClientHandlerExample : MonoBehaviour
                     if (State is null && message == "healthy")
                     {
                         // todo update UI
-                        Gen2Client.ResumeMatchmaking();
+                        MatchmakingClient.ResumeMatchmaking();
                     }
                     else if (message != "healthy")
                     {
                         // todo handle outage/maintenance
-                        Debug.LogError($"Gen2 error.\n{monitor.Current}");
-                        Gen2Client.StopMatchmaking();
+                        Debug.LogError($"Matchmaking error.\n{monitor.Current}");
+                        MatchmakingClient.StopMatchmaking();
                     }
                 }
             },
@@ -106,15 +106,15 @@ public class Gen2ClientHandlerExample : MonoBehaviour
             {
                 if (action == ObservableActionType.Log && message.Contains("restart suggested"))
                 {
-                    Gen2Client.Beacons(
+                    MatchmakingClient.Beacons(
                         (BeaconsResponseDTO beacons) =>
                         {
                             Debug.Log($"beacons: {beacons}");
 
-                            Gen2Client.MeasureBeaconsRoundTripTime(
+                            MatchmakingClient.MeasureBeaconsRoundTripTime(
                                 beacons.Beacons,
                                 (Dictionary<string, float> pings) =>
-                                    Gen2Client.StartMatchmaking(new MyTicketsRequestDTO(pings))
+                                    MatchmakingClient.StartMatchmaking(new MyTicketsRequestDTO(pings))
                             );
                         },
                         (string error, UnityWebRequest request) =>
@@ -159,7 +159,7 @@ public class Gen2ClientHandlerExample : MonoBehaviour
 
     public void OnApplicationPause(bool pause)
     {
-        if (!DeleteTicketOnPause || Gen2Client.Ticket.Current is null)
+        if (!DeleteTicketOnPause || MatchmakingClient.Ticket.Current is null)
             return;
         StopMatchmaking();
     }
@@ -173,7 +173,7 @@ public class Gen2ClientHandlerExample : MonoBehaviour
 
     public void StartMatchmaking(MyTicketsRequestDTO ticket)
     {
-        Gen2Client.StartMatchmaking(ticket);
+        MatchmakingClient.StartMatchmaking(ticket);
     }
 
     // group members need to share tickets to group host to start matchmaking
@@ -183,7 +183,7 @@ public class Gen2ClientHandlerExample : MonoBehaviour
         bool abandon = false
     )
     {
-        Gen2Client.StartGroupMatchmaking(
+        MatchmakingClient.StartGroupMatchmaking(
             hostTicket,
             memberTickets,
             (List<TicketResponseDTO> memberAssignments, UnityWebRequest request) =>
@@ -197,6 +197,6 @@ public class Gen2ClientHandlerExample : MonoBehaviour
 
     public void StopMatchmaking()
     {
-        Gen2Client.StopMatchmaking();
+        MatchmakingClient.StopMatchmaking();
     }
 }

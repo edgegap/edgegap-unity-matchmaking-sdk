@@ -1,7 +1,7 @@
 using System;
 using UnityEngine.Events;
 
-namespace Edgegap.Gen2SDK
+namespace Edgegap.Matchmaking
 {
     public class Observable<T>
     {
