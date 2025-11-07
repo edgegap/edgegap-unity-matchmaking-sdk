@@ -1,8 +1,8 @@
-# Edgegap Unity Gen2 SDK
+# Edgegap Unity Matchmaking SDK
 
 This plugin has been tested, and supports Unity versions 2021.3.0f1+, including all LTS releases, and Unity 6.
 
-This plugin is intended to simplify integration of Gen2 Matchmaking through pre-defined set of SDK methods and example client & server runtime handler scripts.
+This plugin is intended to simplify integration of Matchmaking through pre-defined set of SDK methods and example client & server runtime handler scripts.
 
 ## Install With Git (recommended)
 
@@ -19,7 +19,7 @@ This plugin is intended to simplify integration of Gen2 Matchmaking through pre-
 1. Open your Unity project,
 2. Select toolbar option **Window** -> **Package Manager**,
 3. Click the **+** icon and select **Add package from git URL...**,
-4. Input the following URL `https://github.com/edgegap/edgegap-unity-gen2-sdk.git`,
+4. Input the following URL `https://github.com/edgegap/edgegap-unity-matchmaking-sdk.git`,
 5. Click **Add** and wait for the Unity Package Manager to complete the installation.
 
 ## Install via ZIP archive
@@ -65,7 +65,7 @@ To take full advantage of our Unity Gen2 service, you will need to [Create an Ed
 
 ### Troubleshooting
 
-> Unity Editor shows `[Package Manager Window] Error adding package: https://github.com/edgegap/edgegap-unity-gen2-sdk.git`
+> Unity Editor shows `[Package Manager Window] Error adding package: https://github.com/edgegap/edgegap-unity-matchmaking-sdk.git`
 
 - If you’re adding our plugin via git URL, you will need to have a git client installed.
 
