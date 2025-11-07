@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Edgegap.Gen2SDK
+namespace Edgegap.Matchmaking
 {
     public class GroupTicketsResponseDTO
     {

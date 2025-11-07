@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Edgegap.Gen2SDK;
+using Edgegap.Matchmaking;
 using Newtonsoft.Json;
 
 // todo define custom ticket request Data Transfer Objects based on config

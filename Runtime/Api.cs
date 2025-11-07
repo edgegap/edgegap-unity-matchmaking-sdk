@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using Random = UnityEngine.Random;
 
-namespace Edgegap.Gen2SDK
+namespace Edgegap.Matchmaking
 {
     using L = Logger;
 

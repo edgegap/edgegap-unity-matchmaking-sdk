@@ -48,20 +48,20 @@ This is the only official distribution channel for this SDK, do not trust unveri
 
 ## Plugin Usage
 
-[Follow our Getting Started guide first, then explore our Matchmaking Scenarios for inspiration.](https://docs.edgegap.com/learn/matchmaking/getting-started-with-gen2)
+[Follow our Getting Started guide first, then explore our Matchmaking Scenarios for inspiration.](https://docs.edgegap.com/learn/matchmaking/getting-started)
 
 ### Import Simple Example
 
 1. Find this package in Unity Package Manager window.
 2. Open the `Samples` tab.
-3. Click on **Import** next to **Gen2 Simple Example**.
-4. Locate sample files in your project `Assets/Samples/Edgegap Gen2 SDK/{version}/Simple Example`.
-5. Create an Empty GameObject in your scene and attach `Gen2ClientHandlerExample.cs` script.
-6. Configure Gen2 `BaseUrl` and `AuthToken` values from dashboard.
+3. Click on **Import** next to **Simple Example**.
+4. Locate sample files in your project `Assets/Samples/Edgegap Matchmaking SDK/{version}/Simple Example`.
+5. Create an Empty GameObject in your scene and attach `MatchmakingClientHandlerExample.cs` script.
+6. Configure `BaseUrl` and `AuthToken` values from dashboard.
 
 ### Usage Requirements
 
-To take full advantage of our Unity Gen2 service, you will need to [Create an Edgegap Free Tier account](https://app.edgegap.com/auth/register). Our Free Tier let's you test and explore all of Gen2 features for free, no credit card required!
+To take full advantage of our Unity Matchmaking service, you will need to [Create an Edgegap Free Tier account](https://app.edgegap.com/auth/register). Our Free Tier let's you test and explore all of Matchmaking features for free, no credit card required!
 
 ### Troubleshooting
 
@@ -69,10 +69,10 @@ To take full advantage of our Unity Gen2 service, you will need to [Create an Ed
 
 - If you’re adding our plugin via git URL, you will need to have a git client installed.
 
-> Unity Editor 2021 shows `failed to resolve assembly: 'Edgegap.Gen2.SDK...`
+> Unity Editor 2021 shows `failed to resolve assembly: 'Edgegap.Matchmaking.SDK...`
 
 - This is a known issue when using plugin with [Unity's Burst compiler](https://docs.unity3d.com/6000.0/Documentation/Manual/com.unity.burst.html).
-- Install plugin [via ZIP archive](#install-via-zip-archive) and delete `EdgegapGen2SDK.asmdef` in the plugin folder to resolve this.
+- Install plugin [via ZIP archive](#install-via-zip-archive) and delete `EdgegapMatchmakingSDK.asmdef` in the plugin folder to resolve this.
 
 > Visual Studio shows `type or namespace name could not be found` for Edgegap namespace.
 
@@ -82,7 +82,7 @@ To take full advantage of our Unity Gen2 service, you will need to [Create an Ed
 
 ## Update the Plugin in Unity
 
-Before updating, take note of your `Client Version` property on `Gen2Client.cs` to ensure future compatibility.
+Before updating, take note of your `Client Version` property on `MatchmakingClient.cs` to ensure future compatibility.
 
 Depending on your installation method:
 
@@ -93,9 +93,9 @@ Depending on your installation method:
 
 1. **Replace any missing scripts in your scenes!**
 
-   - Verify validity of your `Gen2Client.cs` properties like `BaseUrl` and `AuthToken`.
+   - Verify validity of your `MatchmakingClient.cs` properties like `BaseUrl` and `AuthToken`.
 
-2. **Increase `Client Version` property value of your `Gen2Client.cs` script!**
+2. **Increase `Client Version` property value of your `MatchmakingClient.cs` script!**
 
    - This will prevent loading outdated tickets from cache when matchmaking resumed.
 

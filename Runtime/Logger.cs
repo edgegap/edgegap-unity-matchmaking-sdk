@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Edgegap.Gen2SDK
+namespace Edgegap.Matchmaking
 {
     public static class Logger
     {
