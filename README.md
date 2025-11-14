@@ -1,5 +1,9 @@
 # Edgegap Unity Matchmaking SDK
 
+[Follow our Getting Started guide first, then explore our Matchmaking Scenarios for inspiration.](https://docs.edgegap.com/learn/matchmaking/getting-started)
+
+[![Watch the video](https://img.youtube.com/vi/HxtvzvJ1FTk/0.jpg)](https://www.youtube.com/watch?v=HxtvzvJ1FTk)
+
 This plugin has been tested, and supports Unity versions 2021.3.0f1+, including all LTS releases, and Unity 6.
 
 This plugin is intended to simplify integration of Matchmaking through pre-defined set of SDK methods and example client & server runtime handler scripts.
