@@ -1,3 +1,3 @@
-# Edgegap Gen2 SDK Changelog
+# Edgegap Matchmaking SDK Changelog
 
-Please refer to our [Github repository](https://github.com/edgegap/edgegap-unity-gen2-sdk/releases) for up-to-date changelog.
+Please refer to our [Github repository](https://github.com/edgegap/edgegap-unity-matchmaking-sdk/releases) for up-to-date changelog.
