@@ -28,6 +28,9 @@ namespace Edgegap.Matchmaking
         [JsonProperty("team_id")]
         public string? TeamID;
 
+        [JsonProperty("match_id")]
+        public string? MatchID;
+
         [JsonProperty("assignment")]
         public AssignmentDTO? Assignment;
 
@@ -79,3 +82,4 @@ namespace Edgegap.Matchmaking
         }
     }
 }
+
