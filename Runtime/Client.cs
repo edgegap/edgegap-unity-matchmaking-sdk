@@ -16,7 +16,7 @@ namespace Edgegap.Matchmaking
     public class Client<T, A>
         where T : TicketsRequestDTO<A>
     {
-        private Api<T, A> Gen2Api;
+        private Api<T, A> MatchmakingApi;
 
         public MonoBehaviour Handler;
 
@@ -53,9 +53,9 @@ namespace Edgegap.Matchmaking
             string authToken,
             string clientVersion = "1.0.0",
             bool saveStateInPlayerPrefs = true,
-            string pLAYER_PREFS_KEY_VERSION = "EdgegapGen2ClientVersion",
-            string pLAYER_PREFS_KEY_TICKET = "EdgegapGen2ClientTicket",
-            string pLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapGen2ClientAssignment",
+            string pLAYER_PREFS_KEY_VERSION = "EdgegapMatchmakingClientVersion",
+            string pLAYER_PREFS_KEY_TICKET = "EdgegapMatchmakingClientTicket",
+            string pLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapMatchmakingClientAssignment",
             int requestTimeoutSeconds = 3,
             float pollingBackoffSeconds = 1f,
             int maxConsecutivePollingErrors = 10,
@@ -67,7 +67,7 @@ namespace Edgegap.Matchmaking
         {
             if (handler is null)
             {
-                throw new Exception("Gen2Client Handler not assigned.");
+                throw new Exception("MatchmakingClient Handler not assigned.");
             }
 
             Handler = handler;
@@ -91,7 +91,7 @@ namespace Edgegap.Matchmaking
 
         public void Status()
         {
-            Gen2Api.GetMonitor(
+            MatchmakingApi.GetMonitor(
                 (MonitorResponseDTO monitor, UnityWebRequest request) =>
                 {
                     if (monitor.Status == "HEALTHY")
@@ -116,7 +116,7 @@ namespace Edgegap.Matchmaking
             Action<string, UnityWebRequest> onErrorDelegate
         )
         {
-            Gen2Api.GetBeacons(
+            MatchmakingApi.GetBeacons(
                 (BeaconsResponseDTO beacons, UnityWebRequest request) =>
                 {
                     onSuccessDelegate(beacons);
@@ -168,7 +168,7 @@ namespace Edgegap.Matchmaking
 
             _Abandon(() =>
             {
-                Gen2Api.CreateTicketAsync(
+                MatchmakingApi.CreateTicketAsync(
                     ticket,
                     (TicketResponseDTO assignment, UnityWebRequest request) =>
                     {
@@ -205,7 +205,7 @@ namespace Edgegap.Matchmaking
 
             _Abandon(() =>
             {
-                Gen2Api.CreateGroupTicketAsync(
+                MatchmakingApi.CreateGroupTicketAsync(
                     groupTicket,
                     (GroupTicketsResponseDTO assignment, UnityWebRequest request) =>
                     {
@@ -285,13 +285,13 @@ namespace Edgegap.Matchmaking
                 _LoadStateFromPlayerPrefs();
             }
 
-            Gen2Api = new Api<T, A>(Handler, AuthToken, BaseUrl);
+            MatchmakingApi = new Api<T, A>(Handler, AuthToken, BaseUrl);
 
             _SubscribeLogger(Monitor, "Monitor");
             _SubscribeLogger(Ticket, "Ticket", LogTicketUpdates);
             _SubscribeLogger(Assignment, "Assignment", LogAssignmentUpdates);
 
-            Gen2Api.GetMonitor(
+            MatchmakingApi.GetMonitor(
                 (MonitorResponseDTO monitor, UnityWebRequest request) =>
                 {
                     _SubscribePlayerPrefSave(Ticket, "Ticket", PLAYER_PREFS_KEY_TICKET);
@@ -463,7 +463,7 @@ namespace Edgegap.Matchmaking
                 Assignment._Notify("polling now");
             }
 
-            Gen2Api.GetTicketAsync(
+            MatchmakingApi.GetTicketAsync(
                 Assignment.Current.ID,
                 (TicketResponseDTO assignment, UnityWebRequest request) =>
                 {
@@ -541,7 +541,7 @@ namespace Edgegap.Matchmaking
                 return;
             }
 
-            Gen2Api.DeleteTicketAsync(
+            MatchmakingApi.DeleteTicketAsync(
                 Assignment.Current.ID,
                 (UnityWebRequest request) =>
                 {
@@ -629,3 +629,4 @@ namespace Edgegap.Matchmaking
         #endregion
     }
 }
+

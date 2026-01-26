@@ -68,7 +68,7 @@ namespace Edgegap.Matchmaking
                     catch (Exception e)
                     {
                         L._Error(
-                            $"Couldn't parse monitor, consider updating Gen2 SDK. {e.Message}"
+                            $"Couldn't parse monitor, consider updating Matchmaking SDK. {e.Message}"
                         );
                         throw;
                     }
@@ -96,7 +96,7 @@ namespace Edgegap.Matchmaking
                     catch (Exception e)
                     {
                         L._Error(
-                            $"Couldn't parse beacons, consider updating Gen2 SDK. {e.Message}"
+                            $"Couldn't parse beacons, consider updating Matchmaking SDK. {e.Message}"
                         );
                         throw;
                     }
@@ -126,7 +126,7 @@ namespace Edgegap.Matchmaking
                     catch (Exception e)
                     {
                         L._Error(
-                            $"Couldn't parse assignment, consider updating Gen2 SDK. {e.Message}"
+                            $"Couldn't parse assignment, consider updating Matchmaking SDK. {e.Message}"
                         );
                         throw;
                     }
@@ -155,7 +155,7 @@ namespace Edgegap.Matchmaking
                     catch (Exception e)
                     {
                         L._Error(
-                            $"Couldn't parse assignment, consider updating Gen2 SDK. {e.Message}"
+                            $"Couldn't parse assignment, consider updating Matchmaking SDK. {e.Message}"
                         );
                         throw;
                     }
@@ -183,7 +183,7 @@ namespace Edgegap.Matchmaking
                     catch (Exception e)
                     {
                         L._Error(
-                            $"Couldn't parse assignment, consider updating Gen2 SDK. {e.Message}"
+                            $"Couldn't parse assignment, consider updating Matchmaking SDK. {e.Message}"
                         );
                         throw;
                     }
@@ -357,3 +357,4 @@ namespace Edgegap.Matchmaking
         #endregion
     }
 }
+

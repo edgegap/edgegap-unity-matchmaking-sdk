@@ -23,7 +23,7 @@ namespace Edgegap.Matchmaking
         }
 
         public static string _FormatLog<T>(T message) =>
-            $"{DateTime.UtcNow} Gen2 | {_ToStringOrNull(message)}";
+            $"{DateTime.UtcNow} Matchmaker | {_ToStringOrNull(message)}";
 
         public static string _FormatNotifyMessage<T>(string prefix, string message, T value)
         {
@@ -55,3 +55,4 @@ namespace Edgegap.Matchmaking
         }
     }
 }
+
