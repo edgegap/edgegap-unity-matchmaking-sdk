@@ -6,7 +6,6 @@ using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
-using Ping = UnityEngine.Ping;
 using Random = UnityEngine.Random;
 
 namespace Edgegap.Matchmaking
@@ -17,6 +16,7 @@ namespace Edgegap.Matchmaking
         where T : TicketsRequestDTO<A>
     {
         private Api<T, A> MatchmakingApi;
+        private Edgegap.Ping Ping;
 
         public MonoBehaviour Handler;
 
@@ -24,17 +24,17 @@ namespace Edgegap.Matchmaking
         public string BaseUrl { get; }
         public string AuthToken { private get; set; }
 
-        public string ClientVersion;
-        public bool SaveStateInPlayerPrefs;
-        internal string PLAYER_PREFS_KEY_VERSION;
-        internal string PLAYER_PREFS_KEY_TICKET;
-        internal string PLAYER_PREFS_KEY_ASSIGNMENT;
-
         public int RequestTimeoutSeconds;
         public float PollingBackoffSeconds;
         public int MaxConsecutivePollingErrors;
 
+        public bool SaveStateInPlayerPrefs;
+        public string ClientVersion;
         public float RemoveAssignmentSeconds;
+
+        internal string PLAYER_PREFS_KEY_VERSION;
+        internal string PLAYER_PREFS_KEY_TICKET;
+        internal string PLAYER_PREFS_KEY_ASSIGNMENT;
 
         public bool LogTicketUpdates;
         public bool LogAssignmentUpdates;
@@ -51,15 +51,15 @@ namespace Edgegap.Matchmaking
             MonoBehaviour handler,
             string baseUrl,
             string authToken,
-            string clientVersion = "1.0.0",
-            bool saveStateInPlayerPrefs = true,
-            string pLAYER_PREFS_KEY_VERSION = "EdgegapMatchmakingClientVersion",
-            string pLAYER_PREFS_KEY_TICKET = "EdgegapMatchmakingClientTicket",
-            string pLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapMatchmakingClientAssignment",
             int requestTimeoutSeconds = 3,
             float pollingBackoffSeconds = 1f,
             int maxConsecutivePollingErrors = 10,
+            bool saveStateInPlayerPrefs = true,
+            string clientVersion = "1.0.0",
             float removeAssignmentSeconds = 30f,
+            string pLAYER_PREFS_KEY_VERSION = "EdgegapMatchmakingClientVersion",
+            string pLAYER_PREFS_KEY_TICKET = "EdgegapMatchmakingClientTicket",
+            string pLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapMatchmakingClientAssignment",
             bool logTicketUpdates = true,
             bool logAssignmentUpdates = true,
             bool logPollingUpdates = false
@@ -71,17 +71,22 @@ namespace Edgegap.Matchmaking
             }
 
             Handler = handler;
+
             BaseUrl = baseUrl;
             AuthToken = authToken;
-            ClientVersion = clientVersion;
-            SaveStateInPlayerPrefs = saveStateInPlayerPrefs;
-            PLAYER_PREFS_KEY_VERSION = pLAYER_PREFS_KEY_VERSION;
-            PLAYER_PREFS_KEY_TICKET = pLAYER_PREFS_KEY_TICKET;
-            PLAYER_PREFS_KEY_ASSIGNMENT = pLAYER_PREFS_KEY_ASSIGNMENT;
+
             RequestTimeoutSeconds = requestTimeoutSeconds;
             PollingBackoffSeconds = pollingBackoffSeconds;
             MaxConsecutivePollingErrors = maxConsecutivePollingErrors;
+
+            SaveStateInPlayerPrefs = saveStateInPlayerPrefs;
+            ClientVersion = clientVersion;
             RemoveAssignmentSeconds = removeAssignmentSeconds;
+
+            PLAYER_PREFS_KEY_VERSION = pLAYER_PREFS_KEY_VERSION;
+            PLAYER_PREFS_KEY_TICKET = pLAYER_PREFS_KEY_TICKET;
+            PLAYER_PREFS_KEY_ASSIGNMENT = pLAYER_PREFS_KEY_ASSIGNMENT;
+
             LogTicketUpdates = logTicketUpdates;
             LogAssignmentUpdates = logAssignmentUpdates;
             LogPollingUpdates = logPollingUpdates;
@@ -286,6 +291,7 @@ namespace Edgegap.Matchmaking
             }
 
             MatchmakingApi = new Api<T, A>(Handler, AuthToken, BaseUrl);
+            Ping = new Edgegap.Ping(Handler);
 
             _SubscribeLogger(Monitor, "Monitor");
             _SubscribeLogger(Ticket, "Ticket", LogTicketUpdates);
@@ -375,7 +381,7 @@ namespace Edgegap.Matchmaking
 
         internal void _SubscribeLogger<O>(
             Observable<O> observable,
-            string name,
+            string subject,
             bool enabled = true
         )
         {
@@ -387,11 +393,24 @@ namespace Edgegap.Matchmaking
 
                     if (type == ObservableActionType.Update)
                     {
-                        L._Log(L._FormatUpdateMessage(name, message, obs.Previous, obs.Current));
+                        L._Log(
+                            L._FormatUpdateMessage(
+                                "Matchmaking",
+                                subject,
+                                message,
+                                obs.Previous,
+                                obs.Current
+                            )
+                        );
                     }
                     else
                     {
-                        string log = L._FormatNotifyMessage(name, message, obs.Current);
+                        string log = L._FormatNotifyMessage(
+                            "Matchmaking",
+                            subject,
+                            message,
+                            obs.Current
+                        );
                         if (type == ObservableActionType.Log)
                         {
                             L._Log(log);
@@ -581,7 +600,7 @@ namespace Edgegap.Matchmaking
             foreach (BeaconDTO beacon in beacons)
             {
                 Handler.StartCoroutine(
-                    _GetAverageRoundTripTime(
+                    Ping.GetAverageRoundTripTime(
                         beacon.PublicIP,
                         (double ping) => results.Add(beacon.Location.City, (float)ping),
                         requests
@@ -592,41 +611,6 @@ namespace Edgegap.Matchmaking
             yield return new WaitUntil(() => results.Keys.Count == beacons.Count());
             onCompleteDelegate(results);
         }
-
-        internal IEnumerator _GetAverageRoundTripTime(
-            string ip,
-            Action<double> onCompleteDelegate,
-            int requests
-        )
-        {
-            List<int> pings = new List<int>();
-            for (int i = 0; i < requests; i++)
-            {
-                Handler.StartCoroutine(_IcmpPing(ip, (int rtt) => pings.Add(rtt)));
-            }
-
-            yield return new WaitUntil(() => pings.Count == requests);
-
-            List<int> finishedPings = pings.Where((int p) => p > 0).ToList();
-            onCompleteDelegate(
-                finishedPings.Count() > 0 ? Math.Round(finishedPings.Average(), 2) : 0f
-            );
-        }
-
-        internal IEnumerator _IcmpPing(string ip, Action<int> onCompleteDelegate)
-        {
-            Ping ping = new Ping(ip);
-            double start = Time.realtimeSinceStartupAsDouble;
-
-            yield return new WaitUntil(
-                () =>
-                    ping.isDone || Time.realtimeSinceStartupAsDouble - start > RequestTimeoutSeconds
-            );
-
-            onCompleteDelegate(ping.time);
-            ping.DestroyPing();
-        }
         #endregion
     }
 }
-
