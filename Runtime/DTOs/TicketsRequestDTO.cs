@@ -104,4 +104,25 @@ namespace Edgegap.Matchmaking
             return JsonConvert.SerializeObject(this);
         }
     }
+    
+    public abstract class GroupUpRequestDTO<A> : TicketsRequestDTO<A>
+    {
+        [JsonProperty("is_ready")]
+        public bool IsReady;
+
+        public GroupUpRequestDTO(string profile, bool isReady = false)
+            : base(profile)
+        {
+            IsReady = isReady;
+        }
+    }
+
+    public class SimpleGroupUpRequestDTO : GroupUpRequestDTO<LatenciesAttributesDTO>
+    {
+        public SimpleGroupUpRequestDTO(Dictionary<string, float> latencyBeacons)
+            : base("simple-example")
+        {
+            Attributes = new LatenciesAttributesDTO(latencyBeacons);
+        }
+    }
 }
