@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEngine.Networking;
 using Random = UnityEngine.Random;
 
+[assembly: UnityEngine.Scripting.AlwaysLinkAssembly]
+
 namespace Edgegap
 {
     using L = Logger;

@@ -40,10 +40,10 @@ namespace Edgegap.Matchmaking
         public bool LogAssignmentUpdates;
         public bool LogPollingUpdates;
 
-        public Observable<TicketResponseDTO> Assignment { get; private set; } =
-            new Observable<TicketResponseDTO> { };
         public Observable<MonitorResponseDTO> Monitor { get; private set; } =
             new Observable<MonitorResponseDTO> { };
+        public Observable<TicketResponseDTO> Assignment { get; private set; } =
+            new Observable<TicketResponseDTO> { };
         public Observable<T> Ticket { get; private set; } = new Observable<T> { };
         private protected bool Polling = false;
 
@@ -294,22 +294,22 @@ namespace Edgegap.Matchmaking
             Ping = new Edgegap.Ping(Handler);
 
             _SubscribeLogger(Monitor, "Monitor");
+            Monitor.Subscribe(onMonitorUpdate);
+
             _SubscribeLogger(Ticket, "Ticket", LogTicketUpdates);
+            _SubscribePlayerPrefSave(Ticket, "Ticket", PLAYER_PREFS_KEY_TICKET);
+            if (onTicketUpdate is not null)
+            {
+                Ticket.Subscribe(onTicketUpdate);
+            }
+
             _SubscribeLogger(Assignment, "Assignment", LogAssignmentUpdates);
+            _SubscribePlayerPrefSave(Assignment, "Assignment", PLAYER_PREFS_KEY_ASSIGNMENT);
+            Assignment.Subscribe(onAssignmentUpdate);
 
             MatchmakingApi.GetMonitor(
                 (MonitorResponseDTO monitor, UnityWebRequest request) =>
                 {
-                    _SubscribePlayerPrefSave(Ticket, "Ticket", PLAYER_PREFS_KEY_TICKET);
-                    _SubscribePlayerPrefSave(Assignment, "Assignment", PLAYER_PREFS_KEY_ASSIGNMENT);
-
-                    if (onTicketUpdate is not null)
-                    {
-                        Ticket.Subscribe(onTicketUpdate);
-                    }
-                    Assignment.Subscribe(onAssignmentUpdate);
-                    Monitor.Subscribe(onMonitorUpdate);
-
                     if (monitor.Status == "HEALTHY")
                     {
                         Monitor._Update(monitor, "healthy");
