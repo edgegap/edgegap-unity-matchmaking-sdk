@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace Edgegap.Matchmaking
@@ -32,7 +31,7 @@ namespace Edgegap.Matchmaking
         public string? MatchID;
 
         [JsonProperty("assignment")]
-        public AssignmentDTO? Assignment;
+        public ServerDTO? Assignment;
 
 #nullable disable
 
@@ -41,45 +40,4 @@ namespace Edgegap.Matchmaking
             return JsonConvert.SerializeObject(this);
         }
     }
-
-    public class AssignmentDTO
-    {
-        [JsonProperty("fqdn")]
-        public string Fqdn;
-
-        [JsonProperty("public_ip")]
-        public string PublicIP;
-
-        [JsonProperty("ports")]
-        public Dictionary<string, PortMappingDTO> Ports;
-
-        [JsonProperty("location")]
-        public LocationDTO Location;
-
-        public override string ToString()
-        {
-            return JsonConvert.SerializeObject(this);
-        }
-    }
-
-    public class PortMappingDTO
-    {
-        [JsonProperty("internal")]
-        public string Internal;
-
-        [JsonProperty("external")]
-        public string External;
-
-        [JsonProperty("link")]
-        public string Link;
-
-        [JsonProperty("protocol")]
-        public string Protocol;
-
-        public override string ToString()
-        {
-            return JsonConvert.SerializeObject(this);
-        }
-    }
 }
-

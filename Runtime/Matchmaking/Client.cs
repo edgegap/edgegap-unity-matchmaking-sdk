@@ -99,7 +99,7 @@ namespace Edgegap.Matchmaking
             MatchmakingApi.GetMonitor(
                 (MonitorResponseDTO monitor, UnityWebRequest request) =>
                 {
-                    if (monitor.Status == "HEALTHY")
+                    if (monitor.Status.ToLower() == "healthy")
                     {
                         Monitor._Update(monitor, "healthy");
                     }
@@ -307,24 +307,7 @@ namespace Edgegap.Matchmaking
             _SubscribePlayerPrefSave(Assignment, "Assignment", PLAYER_PREFS_KEY_ASSIGNMENT);
             Assignment.Subscribe(onAssignmentUpdate);
 
-            MatchmakingApi.GetMonitor(
-                (MonitorResponseDTO monitor, UnityWebRequest request) =>
-                {
-                    if (monitor.Status == "HEALTHY")
-                    {
-                        Monitor._Update(monitor, "healthy");
-                    }
-                    else
-                    {
-                        Monitor._Update(monitor, "unhealthy");
-                    }
-                },
-                (string error, UnityWebRequest request) =>
-                {
-                    L._Error(error);
-                    Monitor._Update(null, "error");
-                }
-            );
+            Status();
         }
 
         internal void _LoadStateFromPlayerPrefs()

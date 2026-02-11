@@ -1,5 +1,4 @@
 using System;
-using System.Net.Sockets;
 using Edgegap.Matchmaking;
 using UnityEngine;
 using UnityEngine.Events;
@@ -9,9 +8,10 @@ namespace Edgegap.ServerBrowser
 {
     using L = Logger;
 
-    public class Client
+    public class ServerAgent<ServerInstanceMetadata>
+        where ServerInstanceMetadata : MetadataDTO
     {
-        private Api ServerBrowserApi;
+        private Api<ServerInstanceMetadata> ServerBrowserApi;
         private Edgegap.Ping Ping;
 
         public MonoBehaviour Handler;
@@ -36,10 +36,10 @@ namespace Edgegap.ServerBrowser
         //public bool LogAssignmentUpdates;
         //public bool LogPollingUpdates;
 
-        public Observable<MonitorResponseDTO> Monitor { get; private set; } =
-            new Observable<MonitorResponseDTO> { };
+        public Observable<MonitorDTO> Monitor { get; private set; } =
+            new Observable<MonitorDTO> { };
 
-        public Client(
+        public ServerAgent(
             MonoBehaviour handler,
             string baseUrl,
             string authToken,
@@ -79,20 +79,38 @@ namespace Edgegap.ServerBrowser
             //LogPollingUpdates = logPollingUpdates;
         }
 
-        #region Client API
+        #region Agent API
         public void Status()
         {
-            //MatchmakingApi.GetMonitor(
+            ServerBrowserApi.GetMonitor(
+                (MonitorDTO monitor, UnityWebRequest request) =>
+                {
+                    if (monitor.Status.ToLower() == "healthy")
+                    {
+                        Monitor._Update(monitor, "healthy");
+                    }
+                    else
+                    {
+                        Monitor._Update(monitor, "unhealthy");
+                    }
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    L._Error(error);
+                    Monitor._Update(null, "error");
+                }
+            );
+        }
+
+        public void RegisterInstance()
+        {
+            // @todo
         }
         #endregion
 
         #region Initialization
         public void Initialize(
-            UnityAction<
-                Observable<MonitorResponseDTO>,
-                ObservableActionType,
-                string
-            > onMonitorUpdate
+            UnityAction<Observable<MonitorDTO>, ObservableActionType, string> onMonitorUpdate
         )
         {
             if (string.IsNullOrEmpty(BaseUrl.Trim()))
@@ -110,30 +128,13 @@ namespace Edgegap.ServerBrowser
             //    _LoadStateFromPlayerPrefs();
             //}
 
-            ServerBrowserApi = new Api(Handler, AuthToken, BaseUrl);
+            ServerBrowserApi = new Api<ServerInstanceMetadata>(Handler, AuthToken, BaseUrl);
             Ping = new Edgegap.Ping(Handler);
 
             _SubscribeLogger(Monitor, "Monitor");
             Monitor.Subscribe(onMonitorUpdate);
 
-            ServerBrowserApi.GetMonitor(
-                (MonitorResponseDTO monitor, UnityWebRequest request) =>
-                {
-                    if (monitor.Status.ToLower() == "healthy")
-                    {
-                        Monitor._Update(monitor, "healthy");
-                    }
-                    else
-                    {
-                        Monitor._Update(monitor, "unhealthy");
-                    }
-                },
-                (string error, UnityWebRequest request) =>
-                {
-                    L._Error(error);
-                    Monitor._Update(null, "error");
-                }
-            );
+            Status();
         }
 
         //internal void _LoadStateFromPlayerPrefs()

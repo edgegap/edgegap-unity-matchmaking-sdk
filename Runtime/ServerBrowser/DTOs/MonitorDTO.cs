@@ -2,7 +2,7 @@ using Newtonsoft.Json;
 
 namespace Edgegap.ServerBrowser
 {
-    public class MonitorResponseDTO
+    public class MonitorDTO
     {
         [JsonProperty("status")]
         public string Status;
