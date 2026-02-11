@@ -14,6 +14,11 @@
       "displayName": "Matchmaking - Simple Example",
       "description": "Minimal Recommended Example.",
       "path": "Samples~/MatchmakingSimpleExample"
+    },
+    {
+      "displayName": "Matchmaking - Advanced Example",
+      "description": "Advanced Example.",
+      "path": "Samples~/MatchmakingAdvancedExample"
     }
   ],
   "dependencies": {
