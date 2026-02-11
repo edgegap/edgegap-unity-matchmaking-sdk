@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Newtonsoft.Json;
 
 namespace Edgegap.Matchmaking
 {
@@ -28,38 +27,46 @@ namespace Edgegap.Matchmaking
 
                 if (key == "MM_TICKET_IDS")
                 {
-                    TicketIds = TryParseEnvVariable<List<string>>(envEntry);
+                    TicketIds = ServerHandler.TryParseEnvVariable<List<string>>(envEntry);
                 }
                 else if (key.StartsWith("MM_TICKET_"))
                 {
-                    InjectedTicketDTO<A> ticket = TryParseEnvVariable<InjectedTicketDTO<A>>(
-                        envEntry
-                    );
+                    InjectedTicketDTO<A> ticket = ServerHandler.TryParseEnvVariable<
+                        InjectedTicketDTO<A>
+                    >(envEntry);
                     Tickets[ticket.ID] = ticket;
                 }
                 else if (key == "MM_GROUPS")
                 {
-                    Groups = TryParseEnvVariable<Dictionary<string, List<string>>>(envEntry);
+                    Groups = ServerHandler.TryParseEnvVariable<Dictionary<string, List<string>>>(
+                        envEntry
+                    );
                 }
                 else if (key == "MM_TEAMS")
                 {
-                    Teams = TryParseEnvVariable<Dictionary<string, List<string>>>(envEntry);
+                    Teams = ServerHandler.TryParseEnvVariable<Dictionary<string, List<string>>>(
+                        envEntry
+                    );
                 }
                 else if (key == "MM_MATCH_ID")
                 {
-                    MatchId = TryParseEnvVariable<string>(envEntry);
+                    MatchId = ServerHandler.TryParseEnvVariable<string>(envEntry);
                 }
                 else if (key == "MM_MATCH_PROFILE")
                 {
-                    MatchProfile = TryParseEnvVariable<string>(envEntry);
+                    MatchProfile = ServerHandler.TryParseEnvVariable<string>(envEntry);
                 }
                 else if (key == "MM_EQUALITY")
                 {
-                    Equality = TryParseEnvVariable<Dictionary<string, string>>(envEntry);
+                    Equality = ServerHandler.TryParseEnvVariable<Dictionary<string, string>>(
+                        envEntry
+                    );
                 }
                 else if (key == "MM_INTERSECTION")
                 {
-                    Intersection = TryParseEnvVariable<Dictionary<string, List<string>>>(envEntry);
+                    Intersection = ServerHandler.TryParseEnvVariable<
+                        Dictionary<string, List<string>>
+                    >(envEntry);
                 }
             }
 
@@ -70,22 +77,6 @@ namespace Edgegap.Matchmaking
                     L._Warn($"Couldn't find injected ticket body for injected ticket ID {id}.");
                 }
             }
-        }
-
-        public V TryParseEnvVariable<V>(DictionaryEntry keyValuePair)
-        {
-            V value;
-            try
-            {
-                value = JsonConvert.DeserializeObject<V>(keyValuePair.Value.ToString());
-            }
-            catch (Exception e)
-            {
-                throw new Exception(
-                    $"Edgegap Envs | Couldn't parse variable '{keyValuePair.Key}', consider updating Edgegap SDK.\n{e.Message}"
-                );
-            }
-            return value;
         }
     }
 }
