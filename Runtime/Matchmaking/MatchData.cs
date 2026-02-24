@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Edgegap.Matchmaking
 {
@@ -8,13 +9,28 @@ namespace Edgegap.Matchmaking
 
     public class MatchData<A>
     {
+        [JsonProperty("MM_TICKET_IDS")]
         public List<string> TicketIds { get; private set; }
+
+        [JsonIgnore]
         public Dictionary<string, InjectedTicketDTO<A>> Tickets { get; private set; }
+
+        [JsonProperty("MM_GROUPS")]
         public Dictionary<string, List<string>> Groups { get; private set; }
+
+        [JsonProperty("MM_TEAMS")]
         public Dictionary<string, List<string>> Teams { get; private set; }
+
+        [JsonProperty("MM_MATCH_ID")]
         public string MatchId { get; private set; }
+
+        [JsonProperty("MM_MATCH_PROFILE")]
         public string MatchProfile { get; private set; }
+
+        [JsonProperty("MM_EQUALITY")]
         public Dictionary<string, string> Equality { get; private set; }
+
+        [JsonProperty("MM_INTERSECTION")]
         public Dictionary<string, List<string>> Intersection { get; private set; }
 
         public MatchData()
@@ -23,51 +39,14 @@ namespace Edgegap.Matchmaking
 
             foreach (DictionaryEntry envEntry in Environment.GetEnvironmentVariables())
             {
-                string key = envEntry.Key.ToString();
-
-                if (key == "MM_TICKET_IDS")
+                if (!envEntry.Key.ToString().StartsWith("MM_TICKET_"))
                 {
-                    TicketIds = ServerHandler.TryParseEnvVariable<List<string>>(envEntry);
+                    continue;
                 }
-                else if (key.StartsWith("MM_TICKET_"))
-                {
-                    InjectedTicketDTO<A> ticket = ServerHandler.TryParseEnvVariable<
-                        InjectedTicketDTO<A>
-                    >(envEntry);
-                    Tickets[ticket.ID] = ticket;
-                }
-                else if (key == "MM_GROUPS")
-                {
-                    Groups = ServerHandler.TryParseEnvVariable<Dictionary<string, List<string>>>(
-                        envEntry
-                    );
-                }
-                else if (key == "MM_TEAMS")
-                {
-                    Teams = ServerHandler.TryParseEnvVariable<Dictionary<string, List<string>>>(
-                        envEntry
-                    );
-                }
-                else if (key == "MM_MATCH_ID")
-                {
-                    MatchId = ServerHandler.TryParseEnvVariable<string>(envEntry);
-                }
-                else if (key == "MM_MATCH_PROFILE")
-                {
-                    MatchProfile = ServerHandler.TryParseEnvVariable<string>(envEntry);
-                }
-                else if (key == "MM_EQUALITY")
-                {
-                    Equality = ServerHandler.TryParseEnvVariable<Dictionary<string, string>>(
-                        envEntry
-                    );
-                }
-                else if (key == "MM_INTERSECTION")
-                {
-                    Intersection = ServerHandler.TryParseEnvVariable<
-                        Dictionary<string, List<string>>
-                    >(envEntry);
-                }
+                InjectedTicketDTO<A> ticket = JsonConvert.DeserializeObject<InjectedTicketDTO<A>>(
+                    envEntry.Value.ToString()
+                );
+                Tickets[ticket.ID] = ticket;
             }
 
             foreach (string id in TicketIds)
