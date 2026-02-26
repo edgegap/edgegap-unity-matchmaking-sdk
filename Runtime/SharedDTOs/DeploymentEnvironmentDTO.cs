@@ -5,7 +5,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace Edgegap
 {
-    public class ServerEnvironmentDTO
+    public class DeploymentEnvironmentDTO
     {
         [JsonProperty("ARBITRIUM_REQUEST_ID")]
         public string RequestID { get; private set; }

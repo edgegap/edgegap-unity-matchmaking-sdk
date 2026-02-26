@@ -12,7 +12,7 @@ namespace Edgegap.ServerBrowser
         public ServerInstanceMetadata Metadata;
 
         [JsonProperty("server")]
-        public ServerDTO Server;
+        public DeploymentDTO Server;
 
         [JsonProperty("slots")]
         public List<SlotDTO> Slots;

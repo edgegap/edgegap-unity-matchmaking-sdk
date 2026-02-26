@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace Edgegap
 {
-    public class ServerDTO
+    public class DeploymentDTO
     {
         [JsonProperty("fqdn")]
         public string Fqdn;

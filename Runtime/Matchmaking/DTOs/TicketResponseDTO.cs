@@ -31,7 +31,7 @@ namespace Edgegap.Matchmaking
         public string? MatchID;
 
         [JsonProperty("assignment")]
-        public ServerDTO? Assignment;
+        public DeploymentDTO? Assignment;
 
 #nullable disable
 
