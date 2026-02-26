@@ -14,6 +14,11 @@
             "displayName": "Simple Example",
             "description": "Minimal Recommended Matchmaking Example.",
             "path": "Samples~/SimpleExample"
+        },
+        {
+            "displayName": "Region Picker Example",
+            "description": "Basic Region Picker Matchmaking Example.",
+            "path": "Samples~/SimpleRegionPickerExample"
         }
     ],
     "dependencies": {
