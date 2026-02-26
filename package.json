@@ -11,9 +11,19 @@
   "licensesUrl": "https://choosealicense.com/licenses/mit/",
   "samples": [
     {
+      "displayName": "Deployment Agent Example",
+      "description": "Get environment variables and stop your Deployment.",
+      "path": "Samples~/DeploymentAgent"
+    },
+    {
+      "displayName": "Server Browser - Simple Example",
+      "description": "Get started with minimal server browser example.",
+      "path": "Samples~/ServerBrowserSimple"
+    },
+    {
       "displayName": "Matchmaking - Simple Example",
-      "description": "Minimal Recommended Example.",
-      "path": "Samples~/MatchmakingSimpleExample"
+      "description": "Get started with minimal matchmaking example.",
+      "path": "Samples~/MatchmakingSimple"
     }
   ],
   "dependencies": {
