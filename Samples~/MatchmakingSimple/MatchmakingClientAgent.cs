@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Edgegap;
 using Edgegap.Matchmaking;
-using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Networking;
 using MyTicketsAttributes = Edgegap.Matchmaking.LatenciesAttributesDTO;
@@ -9,11 +8,10 @@ using MyTicketsRequestDTO = Edgegap.Matchmaking.SimpleTicketsRequestDTO;
 
 // todo replace SimpleTicketsRequestDTO with CustomTicketsRequestDTO
 // todo replace LatenciesAttributesDTO with CustomTicketsAttributes
-public class MatchmakingClientHandlerExample : MonoBehaviour
+public class MatchmakingClientAgent : MonoBehaviour
 {
-    public static MatchmakingClientHandlerExample Instance { get; private set; }
+    public static MatchmakingClientAgent Instance { get; private set; }
 
-    #region Matchmaking Configuration
     [Header("Matchmaker Instance")]
     public string BaseUrl;
     public string AuthToken;
@@ -38,7 +36,6 @@ public class MatchmakingClientHandlerExample : MonoBehaviour
     public bool LogTicketUpdates = true;
     public bool LogAssignmentUpdates = true;
     public bool LogPollingUpdates = false;
-    #endregion
 
     public Client<MyTicketsRequestDTO, MyTicketsAttributes> MatchmakingClient;
 
@@ -205,6 +202,9 @@ public class MatchmakingClientHandlerExample : MonoBehaviour
 
     public void StopMatchmaking()
     {
-        MatchmakingClient.StopMatchmaking();
+        if (enabled)
+        {
+            MatchmakingClient.StopMatchmaking();
+        }
     }
 }

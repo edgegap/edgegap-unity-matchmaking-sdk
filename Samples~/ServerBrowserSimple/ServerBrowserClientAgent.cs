@@ -1,10 +1,11 @@
 using Edgegap;
 using Edgegap.ServerBrowser;
+using Newtonsoft.Json;
 using UnityEngine;
 
-public class ServerBrowserClientHandlerExample : MonoBehaviour
+public class ServerBrowserClientAgent : MonoBehaviour
 {
-    public static ServerBrowserClientHandlerExample Instance { get; private set; }
+    public static ServerBrowserClientAgent Instance { get; private set; }
 
     [Header("Matchmaker Instance")]
     public string BaseUrl;
@@ -31,7 +32,7 @@ public class ServerBrowserClientHandlerExample : MonoBehaviour
     //public bool LogAssignmentUpdates = true;
     //public bool LogPollingUpdates = false;
 
-    public Client ServerBrowserClient;
+    public ServerAgent<MyServerInstanceMetadata> ServerBrowserClient;
 
     public void Awake()
     {
@@ -50,7 +51,7 @@ public class ServerBrowserClientHandlerExample : MonoBehaviour
     public void Start()
     {
         // configure Matchmaking
-        ServerBrowserClient = new Client(
+        ServerBrowserClient = new ServerAgent<MyServerInstanceMetadata>(
             this,
             BaseUrl,
             AuthToken,
@@ -71,11 +72,7 @@ public class ServerBrowserClientHandlerExample : MonoBehaviour
         // initialize Server Browser
         ServerBrowserClient.Initialize(
             // handle service monitoring
-            (
-                Observable<MonitorResponseDTO> monitor,
-                ObservableActionType action,
-                string message
-            ) =>
+            (Observable<MonitorDTO> monitor, ObservableActionType action, string message) =>
             {
                 if (action == ObservableActionType.Update)
                 {
@@ -83,6 +80,7 @@ public class ServerBrowserClientHandlerExample : MonoBehaviour
                     {
                         // todo update UI
                         Debug.Log("start browsing");
+                        ServerBrowserClient.RegisterInstance();
                     }
                     else if (message != "healthy")
                     {
@@ -92,5 +90,11 @@ public class ServerBrowserClientHandlerExample : MonoBehaviour
                 }
             }
         );
+    }
+
+    public class MyServerInstanceMetadata : MetadataDTO
+    {
+        [JsonProperty("is_ranked")]
+        public bool IsRanked;
     }
 }

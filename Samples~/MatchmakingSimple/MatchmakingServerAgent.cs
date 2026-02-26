@@ -2,9 +2,9 @@ using Edgegap.Matchmaking;
 using UnityEngine;
 using MyTicketsAttributes = Edgegap.Matchmaking.LatenciesAttributesDTO;
 
-public class MatchDataServerHandlerExample : MonoBehaviour
+public class MatchmakingServerAgent : MonoBehaviour
 {
-    public static MatchDataServerHandlerExample Instance { get; private set; }
+    public static MatchmakingServerAgent Instance { get; private set; }
     public MatchData<MyTicketsAttributes> Match;
 
     public void Awake()
