@@ -77,7 +77,7 @@ namespace Edgegap
             );
         }
 
-        internal void Get(
+        public void Get(
             string url,
             string authToken,
             Action<string, UnityWebRequest> onSuccessDelegate,
@@ -119,7 +119,7 @@ namespace Edgegap
             );
         }
 
-        internal void Delete(
+        public void Delete(
             string url,
             string authToken,
             Action<string, UnityWebRequest> onSuccessDelegate,
@@ -161,7 +161,7 @@ namespace Edgegap
             );
         }
 
-        internal IEnumerator _SendRequestEnumerator(
+        public IEnumerator _SendRequestEnumerator(
             UnityWebRequest request,
             Action<string, UnityWebRequest> onSuccessDelegate,
             Action<string, UnityWebRequest> onErrorDelegate,
