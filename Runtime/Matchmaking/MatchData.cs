@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using Newtonsoft.Json;
 
 namespace Edgegap.Matchmaking
@@ -33,7 +34,8 @@ namespace Edgegap.Matchmaking
         [JsonProperty("MM_INTERSECTION")]
         public Dictionary<string, List<string>> Intersection { get; private set; }
 
-        public MatchData()
+        [OnDeserialized]
+        internal void OnDeserializedMethod(StreamingContext context)
         {
             Tickets = new Dictionary<string, InjectedTicketDTO<A>>();
 

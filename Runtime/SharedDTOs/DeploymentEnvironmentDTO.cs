@@ -47,10 +47,15 @@ namespace Edgegap
         public uint BeaconPortTCP { get; private set; }
 
         [JsonProperty("ARBITRIUM_DEPLOYMENT_LOCATION")]
-        public LocationDTO Location;
+        [JsonConverter(typeof(UnescapedStringConverter<LocationDTO>))]
+        public LocationDTO Location { get; private set; }
 
+        [JsonConverter(typeof(UnescapedStringConverter<PortMappingEnvironmentVariable>))]
         [JsonProperty("ARBITRIUM_PORTS_MAPPING")]
-        public Dictionary<string, PortMappingDTO> PortMapping;
+        private PortMappingEnvironmentVariable _ports;
+
+        [JsonIgnore]
+        public Dictionary<string, PortMappingDTO> PortMapping { get; private set; }
 
         [OnError]
         internal void OnError(StreamingContext context, ErrorContext errorContext)
@@ -58,9 +63,25 @@ namespace Edgegap
             errorContext.Handled = true;
         }
 
+        [OnDeserialized]
+        internal void OnDeserializedMethod(StreamingContext context)
+        {
+            PortMapping = _ports.Ports;
+            foreach (KeyValuePair<string, PortMappingDTO> entry in PortMapping)
+            {
+                entry.Value.Link = $"{RequestID}.pr.edgegap.net:{entry.Value.External}";
+            }
+        }
+
         public override string ToString()
         {
             return JsonConvert.SerializeObject(this);
         }
+    }
+
+    internal class PortMappingEnvironmentVariable
+    {
+        [JsonProperty("ports")]
+        public Dictionary<string, PortMappingDTO> Ports { get; private set; }
     }
 }
