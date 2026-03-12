@@ -1,7 +1,6 @@
-using System;
 using UnityEngine;
 
-namespace Edgegap.Matchmaking
+namespace Edgegap
 {
     public static class Logger
     {
@@ -9,29 +8,32 @@ namespace Edgegap.Matchmaking
         {
             if (!Debug.isDebugBuild)
                 return;
-            Debug.Log(_FormatLog(message));
+            Debug.Log($"Edgegap {message}");
         }
 
         public static void _Warn<T>(T message)
         {
-            Debug.LogWarning(_FormatLog(message));
+            Debug.LogWarning($"Edgegap {message}");
         }
 
         public static void _Error<T>(T message)
         {
-            Debug.LogError(_FormatLog(message));
+            Debug.LogError($"Edgegap {message}");
         }
 
-        public static string _FormatLog<T>(T message) =>
-            $"{DateTime.UtcNow} Matchmaker | {_ToStringOrNull(message)}";
-
-        public static string _FormatNotifyMessage<T>(string prefix, string message, T value)
+        public static string _FormatNotifyMessage<T>(
+            string service,
+            string subject,
+            string message,
+            T value
+        )
         {
-            return $"{prefix}.notify / {message}\n{_ToStringOrNull(value)}";
+            return $"{service} | {subject}.notify('{message}')\n{_ToStringOrNull(value)}";
         }
 
         public static string _FormatUpdateMessage<T>(
-            string prefix,
+            string service,
+            string subject,
             string message,
             T previous,
             T current
@@ -41,12 +43,11 @@ namespace Edgegap.Matchmaking
                 "\n",
                 new string[]
                 {
-                    $"{prefix}.changed / {message}",
+                    $"{service} | {subject}.changed('{message}')",
                     $"current: {_ToStringOrNull(current)}",
                     $"previous: {_ToStringOrNull(previous)}",
                 }
             );
-            ;
         }
 
         public static string _ToStringOrNull<T>(T value)
@@ -55,4 +56,3 @@ namespace Edgegap.Matchmaking
         }
     }
 }
-

@@ -6,7 +6,6 @@ using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
-using Ping = UnityEngine.Ping;
 using Random = UnityEngine.Random;
 
 namespace Edgegap.Matchmaking
@@ -17,6 +16,7 @@ namespace Edgegap.Matchmaking
         where T : TicketsRequestDTO<A>
     {
         private Api<T, A> MatchmakingApi;
+        private Edgegap.Ping Ping;
 
         public MonoBehaviour Handler;
 
@@ -24,26 +24,26 @@ namespace Edgegap.Matchmaking
         public string BaseUrl { get; }
         public string AuthToken { private get; set; }
 
-        public string ClientVersion;
-        public bool SaveStateInPlayerPrefs;
-        internal string PLAYER_PREFS_KEY_VERSION;
-        internal string PLAYER_PREFS_KEY_TICKET;
-        internal string PLAYER_PREFS_KEY_ASSIGNMENT;
-
         public int RequestTimeoutSeconds;
         public float PollingBackoffSeconds;
         public int MaxConsecutivePollingErrors;
 
+        public bool SaveStateInPlayerPrefs;
+        public string ClientVersion;
         public float RemoveAssignmentSeconds;
+
+        internal string PLAYER_PREFS_KEY_VERSION;
+        internal string PLAYER_PREFS_KEY_TICKET;
+        internal string PLAYER_PREFS_KEY_ASSIGNMENT;
 
         public bool LogTicketUpdates;
         public bool LogAssignmentUpdates;
         public bool LogPollingUpdates;
 
-        public Observable<TicketResponseDTO> Assignment { get; private set; } =
-            new Observable<TicketResponseDTO> { };
         public Observable<MonitorResponseDTO> Monitor { get; private set; } =
             new Observable<MonitorResponseDTO> { };
+        public Observable<TicketResponseDTO> Assignment { get; private set; } =
+            new Observable<TicketResponseDTO> { };
         public Observable<T> Ticket { get; private set; } = new Observable<T> { };
         private protected bool Polling = false;
 
@@ -51,15 +51,15 @@ namespace Edgegap.Matchmaking
             MonoBehaviour handler,
             string baseUrl,
             string authToken,
-            string clientVersion = "1.0.0",
-            bool saveStateInPlayerPrefs = true,
-            string pLAYER_PREFS_KEY_VERSION = "EdgegapMatchmakingClientVersion",
-            string pLAYER_PREFS_KEY_TICKET = "EdgegapMatchmakingClientTicket",
-            string pLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapMatchmakingClientAssignment",
             int requestTimeoutSeconds = 3,
             float pollingBackoffSeconds = 1f,
             int maxConsecutivePollingErrors = 10,
+            bool saveStateInPlayerPrefs = true,
+            string clientVersion = "1.0.0",
             float removeAssignmentSeconds = 30f,
+            string pLAYER_PREFS_KEY_VERSION = "EdgegapMatchmakingClientVersion",
+            string pLAYER_PREFS_KEY_TICKET = "EdgegapMatchmakingClientTicket",
+            string pLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapMatchmakingClientAssignment",
             bool logTicketUpdates = true,
             bool logAssignmentUpdates = true,
             bool logPollingUpdates = false
@@ -71,17 +71,22 @@ namespace Edgegap.Matchmaking
             }
 
             Handler = handler;
+
             BaseUrl = baseUrl;
             AuthToken = authToken;
-            ClientVersion = clientVersion;
-            SaveStateInPlayerPrefs = saveStateInPlayerPrefs;
-            PLAYER_PREFS_KEY_VERSION = pLAYER_PREFS_KEY_VERSION;
-            PLAYER_PREFS_KEY_TICKET = pLAYER_PREFS_KEY_TICKET;
-            PLAYER_PREFS_KEY_ASSIGNMENT = pLAYER_PREFS_KEY_ASSIGNMENT;
+
             RequestTimeoutSeconds = requestTimeoutSeconds;
             PollingBackoffSeconds = pollingBackoffSeconds;
             MaxConsecutivePollingErrors = maxConsecutivePollingErrors;
+
+            SaveStateInPlayerPrefs = saveStateInPlayerPrefs;
+            ClientVersion = clientVersion;
             RemoveAssignmentSeconds = removeAssignmentSeconds;
+
+            PLAYER_PREFS_KEY_VERSION = pLAYER_PREFS_KEY_VERSION;
+            PLAYER_PREFS_KEY_TICKET = pLAYER_PREFS_KEY_TICKET;
+            PLAYER_PREFS_KEY_ASSIGNMENT = pLAYER_PREFS_KEY_ASSIGNMENT;
+
             LogTicketUpdates = logTicketUpdates;
             LogAssignmentUpdates = logAssignmentUpdates;
             LogPollingUpdates = logPollingUpdates;
@@ -94,7 +99,7 @@ namespace Edgegap.Matchmaking
             MatchmakingApi.GetMonitor(
                 (MonitorResponseDTO monitor, UnityWebRequest request) =>
                 {
-                    if (monitor.Status == "HEALTHY")
+                    if (monitor.Status.ToLower() == "healthy")
                     {
                         Monitor._Update(monitor, "healthy");
                     }
@@ -105,7 +110,7 @@ namespace Edgegap.Matchmaking
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    L._Error(error);
+                    L._Error($"Matchmaking | Monitor API error.\n{error}");
                     Monitor._Update(null, "error");
                 }
             );
@@ -123,7 +128,7 @@ namespace Edgegap.Matchmaking
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    L._Error(error);
+                    L._Error($"Matchmaking | Beacons API error.\n{error}");
                     onErrorDelegate(error, request);
                 }
             );
@@ -179,7 +184,7 @@ namespace Edgegap.Matchmaking
                     },
                     (string error, UnityWebRequest request) =>
                     {
-                        L._Error(error);
+                        L._Error($"Matchmaking | Ticket Create error.\n{error}");
                         _Abandon();
                     }
                 );
@@ -216,7 +221,7 @@ namespace Edgegap.Matchmaking
                     },
                     (string error, UnityWebRequest request) =>
                     {
-                        L._Error(error);
+                        L._Error($"Matchmaking | Group-Ticket Create error.\n{error}");
                         _Abandon();
                     }
                 );
@@ -242,7 +247,7 @@ namespace Edgegap.Matchmaking
         {
             if (Ticket.Current is null && Assignment.Current is null)
             {
-                L._Warn("No ticket or assignment found, stopped.");
+                L._Warn("Matchmaking | No ticket or assignment found, stopped.");
                 if (onCompleteDelegate is not null)
                 {
                     onCompleteDelegate();
@@ -286,39 +291,23 @@ namespace Edgegap.Matchmaking
             }
 
             MatchmakingApi = new Api<T, A>(Handler, AuthToken, BaseUrl);
+            Ping = new Edgegap.Ping(Handler);
 
             _SubscribeLogger(Monitor, "Monitor");
+            Monitor.Subscribe(onMonitorUpdate);
+
             _SubscribeLogger(Ticket, "Ticket", LogTicketUpdates);
+            _SubscribePlayerPrefSave(Ticket, "Ticket", PLAYER_PREFS_KEY_TICKET);
+            if (onTicketUpdate is not null)
+            {
+                Ticket.Subscribe(onTicketUpdate);
+            }
+
             _SubscribeLogger(Assignment, "Assignment", LogAssignmentUpdates);
+            _SubscribePlayerPrefSave(Assignment, "Assignment", PLAYER_PREFS_KEY_ASSIGNMENT);
+            Assignment.Subscribe(onAssignmentUpdate);
 
-            MatchmakingApi.GetMonitor(
-                (MonitorResponseDTO monitor, UnityWebRequest request) =>
-                {
-                    _SubscribePlayerPrefSave(Ticket, "Ticket", PLAYER_PREFS_KEY_TICKET);
-                    _SubscribePlayerPrefSave(Assignment, "Assignment", PLAYER_PREFS_KEY_ASSIGNMENT);
-
-                    if (onTicketUpdate is not null)
-                    {
-                        Ticket.Subscribe(onTicketUpdate);
-                    }
-                    Assignment.Subscribe(onAssignmentUpdate);
-                    Monitor.Subscribe(onMonitorUpdate);
-
-                    if (monitor.Status == "HEALTHY")
-                    {
-                        Monitor._Update(monitor, "healthy");
-                    }
-                    else
-                    {
-                        Monitor._Update(monitor, "unhealthy");
-                    }
-                },
-                (string error, UnityWebRequest request) =>
-                {
-                    L._Error(error);
-                    Monitor._Update(null, "error");
-                }
-            );
+            Status();
         }
 
         internal void _LoadStateFromPlayerPrefs()
@@ -330,7 +319,7 @@ namespace Edgegap.Matchmaking
             }
             catch (Exception e)
             {
-                L._Error($"Deserializing client version failed: {e.Message}");
+                L._Error($"Matchmaking | Deserializing client version failed.\n{e.Message}");
             }
 
             // skip reading ticket and assignment if version increased
@@ -353,7 +342,9 @@ namespace Edgegap.Matchmaking
             }
             catch (Exception e)
             {
-                L._Error($"Deserializing ticket failed, create new ticket.\n{e.Message}");
+                L._Error(
+                    $"Matchmaking | Deserializing ticket failed, create new ticket.\n{e.Message}"
+                );
             }
 
             try
@@ -369,13 +360,15 @@ namespace Edgegap.Matchmaking
             }
             catch (Exception e)
             {
-                L._Error($"Deserializing assignment failed, restart matchmaking.\n{e.Message}");
+                L._Error(
+                    $"Matchmaking | Deserializing assignment failed, restart matchmaking.\n{e.Message}"
+                );
             }
         }
 
         internal void _SubscribeLogger<O>(
             Observable<O> observable,
-            string name,
+            string subject,
             bool enabled = true
         )
         {
@@ -387,11 +380,24 @@ namespace Edgegap.Matchmaking
 
                     if (type == ObservableActionType.Update)
                     {
-                        L._Log(L._FormatUpdateMessage(name, message, obs.Previous, obs.Current));
+                        L._Log(
+                            L._FormatUpdateMessage(
+                                "Matchmaking",
+                                subject,
+                                message,
+                                obs.Previous,
+                                obs.Current
+                            )
+                        );
                     }
                     else
                     {
-                        string log = L._FormatNotifyMessage(name, message, obs.Current);
+                        string log = L._FormatNotifyMessage(
+                            "Matchmaking",
+                            subject,
+                            message,
+                            obs.Current
+                        );
                         if (type == ObservableActionType.Log)
                         {
                             L._Log(log);
@@ -437,7 +443,7 @@ namespace Edgegap.Matchmaking
                     }
                     catch (Exception e)
                     {
-                        L._Error($"Serializing {name} failed.\n{e.Message}");
+                        L._Error($"Matchmaking | Serializing '{name}' failed.\n{e.Message}");
                     }
                 }
             );
@@ -460,7 +466,9 @@ namespace Edgegap.Matchmaking
 
             if (LogPollingUpdates)
             {
-                Assignment._Notify("polling now");
+                Assignment._Notify(
+                    $"polling now ({consecutiveErrors + 1}/{MaxConsecutivePollingErrors})"
+                );
             }
 
             MatchmakingApi.GetTicketAsync(
@@ -494,20 +502,13 @@ namespace Edgegap.Matchmaking
                 {
                     if (consecutiveErrors + 1 > MaxConsecutivePollingErrors)
                     {
-                        Monitor._Notify(
-                            $"reached MaxConsecutivePollingErrors={MaxConsecutivePollingErrors}",
-                            ObservableActionType.Error
+                        L._Error(
+                            $"Matchmaking | Reached maximum assignment polling attempts.\n{error}"
                         );
                         _Abandon();
                     }
                     else
                     {
-                        L._Error(error);
-                        Monitor._Notify(
-                            $"polling error={consecutiveErrors + 1} < {MaxConsecutivePollingErrors}",
-                            ObservableActionType.Warn
-                        );
-
                         if (request.responseCode == 429 || request.responseCode >= 500)
                         {
                             Handler.StartCoroutine(
@@ -516,6 +517,7 @@ namespace Edgegap.Matchmaking
                         }
                         else
                         {
+                            L._Error($"Matchmaking | Assignment polling error.\n{error}");
                             _Abandon();
                         }
                     }
@@ -553,7 +555,7 @@ namespace Edgegap.Matchmaking
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    L._Warn(error);
+                    L._Warn($"Matchmaking | Ticket not found, skipping delete.\n{error}");
                     Assignment._Update(null, "abandon failed, deleted");
                     if (onCompletedDelegate is not null)
                     {
@@ -581,7 +583,7 @@ namespace Edgegap.Matchmaking
             foreach (BeaconDTO beacon in beacons)
             {
                 Handler.StartCoroutine(
-                    _GetAverageRoundTripTime(
+                    Ping.GetAverageRoundTripTime(
                         beacon.PublicIP,
                         (double ping) => results.Add(beacon.Location.City, (float)ping),
                         requests
@@ -592,41 +594,6 @@ namespace Edgegap.Matchmaking
             yield return new WaitUntil(() => results.Keys.Count == beacons.Count());
             onCompleteDelegate(results);
         }
-
-        internal IEnumerator _GetAverageRoundTripTime(
-            string ip,
-            Action<double> onCompleteDelegate,
-            int requests
-        )
-        {
-            List<int> pings = new List<int>();
-            for (int i = 0; i < requests; i++)
-            {
-                Handler.StartCoroutine(_IcmpPing(ip, (int rtt) => pings.Add(rtt)));
-            }
-
-            yield return new WaitUntil(() => pings.Count == requests);
-
-            List<int> finishedPings = pings.Where((int p) => p > 0).ToList();
-            onCompleteDelegate(
-                finishedPings.Count() > 0 ? Math.Round(finishedPings.Average(), 2) : 0f
-            );
-        }
-
-        internal IEnumerator _IcmpPing(string ip, Action<int> onCompleteDelegate)
-        {
-            Ping ping = new Ping(ip);
-            double start = Time.realtimeSinceStartupAsDouble;
-
-            yield return new WaitUntil(
-                () =>
-                    ping.isDone || Time.realtimeSinceStartupAsDouble - start > RequestTimeoutSeconds
-            );
-
-            onCompleteDelegate(ping.time);
-            ping.DestroyPing();
-        }
         #endregion
     }
 }
-

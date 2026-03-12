@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Edgegap;
 using Edgegap.Matchmaking;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -7,36 +8,36 @@ using MyTicketsRequestDTO = Edgegap.Matchmaking.SimpleTicketsRequestDTO;
 
 // todo replace SimpleTicketsRequestDTO with CustomTicketsRequestDTO
 // todo replace LatenciesAttributesDTO with CustomTicketsAttributes
-public class MatchmakingClientHandlerExample : MonoBehaviour
+public class MatchmakingClientAgent : MonoBehaviour
 {
-    public static MatchmakingClientHandlerExample Instance { get; private set; }
+    public static MatchmakingClientAgent Instance { get; private set; }
 
-    #region Matchmaking Configuration
+    [Header("Matchmaker Instance")]
     public string BaseUrl;
     public string AuthToken;
 
-    public string ClientVersion = "1.0.0";
-    public bool SaveStateInPlayerPrefs = true;
-    public string PLAYER_PREFS_KEY_VERSION = "EdgegapMatchmakingClientVersion";
-    public string PLAYER_PREFS_KEY_TICKET = "EdgegapMatchmakingClientTicket";
-    public string PLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapMatchmakingClientAssignment";
-
+    [Header("Exponential Retry")]
     public int RequestTimeoutSeconds = 3;
     public float PollingBackoffSeconds = 1f;
     public int MaxConsecutivePollingErrors = 10;
 
+    [Header("Local Caching")]
+    public bool SaveStateInPlayerPrefs = true; // toggle cache on/off
+    public string ClientVersion = ""; // changing or deleting version resets cache
     public float RemoveAssignmentSeconds = 30f;
     public bool DeleteTicketOnPause = false;
     public bool DeleteTicketOnQuit = true;
 
+    private string PLAYER_PREFS_KEY_VERSION = "EdgegapMatchmakingClientVersion";
+    private string PLAYER_PREFS_KEY_TICKET = "EdgegapMatchmakingClientTicket";
+    private string PLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapMatchmakingClientAssignment";
+
+    [Header("Logging")]
     public bool LogTicketUpdates = true;
     public bool LogAssignmentUpdates = true;
     public bool LogPollingUpdates = false;
-    #endregion
 
     public Client<MyTicketsRequestDTO, MyTicketsAttributes> MatchmakingClient;
-
-    private string State;
 
     public void Awake()
     {
@@ -59,15 +60,15 @@ public class MatchmakingClientHandlerExample : MonoBehaviour
             this,
             BaseUrl,
             AuthToken,
-            ClientVersion,
-            SaveStateInPlayerPrefs,
-            PLAYER_PREFS_KEY_VERSION,
-            PLAYER_PREFS_KEY_TICKET,
-            PLAYER_PREFS_KEY_ASSIGNMENT,
             RequestTimeoutSeconds,
             PollingBackoffSeconds,
             MaxConsecutivePollingErrors,
+            SaveStateInPlayerPrefs,
+            ClientVersion,
             RemoveAssignmentSeconds,
+            PLAYER_PREFS_KEY_VERSION,
+            PLAYER_PREFS_KEY_TICKET,
+            PLAYER_PREFS_KEY_ASSIGNMENT,
             LogTicketUpdates,
             LogAssignmentUpdates,
             LogPollingUpdates
@@ -84,7 +85,7 @@ public class MatchmakingClientHandlerExample : MonoBehaviour
             {
                 if (action == ObservableActionType.Update)
                 {
-                    if (State is null && message == "healthy")
+                    if (message == "healthy")
                     {
                         // todo update UI
                         MatchmakingClient.ResumeMatchmaking();
@@ -114,7 +115,11 @@ public class MatchmakingClientHandlerExample : MonoBehaviour
                             MatchmakingClient.MeasureBeaconsRoundTripTime(
                                 beacons.Beacons,
                                 (Dictionary<string, float> pings) =>
-                                    MatchmakingClient.StartMatchmaking(new MyTicketsRequestDTO(pings))
+                                {
+                                    MatchmakingClient.StartMatchmaking(
+                                        new MyTicketsRequestDTO(pings)
+                                    );
+                                }
                             );
                         },
                         (string error, UnityWebRequest request) =>
@@ -197,6 +202,9 @@ public class MatchmakingClientHandlerExample : MonoBehaviour
 
     public void StopMatchmaking()
     {
-        MatchmakingClient.StopMatchmaking();
+        if (enabled)
+        {
+            MatchmakingClient.StopMatchmaking();
+        }
     }
 }
