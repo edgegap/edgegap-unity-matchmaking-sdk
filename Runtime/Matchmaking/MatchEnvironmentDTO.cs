@@ -3,36 +3,43 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace Edgegap.Matchmaking
 {
     using L = Logger;
 
-    public class MatchData<A>
+    public class MatchEnvironmentDTO<A>
     {
+        [JsonProperty("MM_MATCH_PROFILE")]
+        public string MatchProfile { get; set; }
+
         [JsonProperty("MM_TICKET_IDS")]
-        public List<string> TicketIds { get; private set; }
+        public List<string> TicketIds { get; set; }
 
         [JsonIgnore]
-        public Dictionary<string, InjectedTicketDTO<A>> Tickets { get; private set; }
+        public Dictionary<string, InjectedTicketDTO<A>> Tickets { get; set; }
 
         [JsonProperty("MM_GROUPS")]
-        public Dictionary<string, List<string>> Groups { get; private set; }
+        public Dictionary<string, List<string>> Groups { get; set; }
 
         [JsonProperty("MM_TEAMS")]
-        public Dictionary<string, List<string>> Teams { get; private set; }
+        public Dictionary<string, List<string>> Teams { get; set; }
 
         [JsonProperty("MM_MATCH_ID")]
-        public string MatchId { get; private set; }
-
-        [JsonProperty("MM_MATCH_PROFILE")]
-        public string MatchProfile { get; private set; }
+        public string MatchId { get; set; }
 
         [JsonProperty("MM_EQUALITY")]
-        public Dictionary<string, string> Equality { get; private set; }
+        public Dictionary<string, string> Equality { get; set; }
 
         [JsonProperty("MM_INTERSECTION")]
-        public Dictionary<string, List<string>> Intersection { get; private set; }
+        public Dictionary<string, List<string>> Intersection { get; set; }
+
+        [OnError]
+        internal void OnError(StreamingContext context, ErrorContext errorContext)
+        {
+            errorContext.Handled = true;
+        }
 
         [OnDeserialized]
         internal void OnDeserializedMethod(StreamingContext context)
@@ -51,13 +58,21 @@ namespace Edgegap.Matchmaking
                 Tickets[ticket.ID] = ticket;
             }
 
+            if (TicketIds == null)
+                TicketIds = new List<string>();
+
             foreach (string id in TicketIds)
             {
                 if (!Tickets.ContainsKey(id))
                 {
-                    L._Warn($"Couldn't find injected ticket body for injected ticket ID {id}.");
+                    L._Warn($"Match Data | Ticket data not found for injected ticket ID {id}.");
                 }
             }
+        }
+
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
         }
     }
 }

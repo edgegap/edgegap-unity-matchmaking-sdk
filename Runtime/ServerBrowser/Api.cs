@@ -42,7 +42,7 @@ namespace Edgegap.ServerBrowser
                     catch (Exception e)
                     {
                         L._Error(
-                            $"Couldn't parse monitor, consider updating Edgegap SDK. {e.Message}"
+                            $"Matchmaking | Couldn't parse monitor, update Edgegap SDK.\n{e.Message}"
                         );
                         throw;
                     }
@@ -75,7 +75,7 @@ namespace Edgegap.ServerBrowser
                     catch (Exception e)
                     {
                         L._Error(
-                            $"Couldn't parse server instance, consider updating Edgegap SDK. {e.Message}"
+                            $"Server Browser | Couldn't parse server instance, update Edgegap SDK.\n{e.Message}"
                         );
                         throw;
                     }

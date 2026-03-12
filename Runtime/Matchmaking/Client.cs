@@ -110,7 +110,7 @@ namespace Edgegap.Matchmaking
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    L._Error(error);
+                    L._Error($"Matchmaking | Monitor API error.\n{error}");
                     Monitor._Update(null, "error");
                 }
             );
@@ -128,7 +128,7 @@ namespace Edgegap.Matchmaking
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    L._Error(error);
+                    L._Error($"Matchmaking | Beacons API error.\n{error}");
                     onErrorDelegate(error, request);
                 }
             );
@@ -184,7 +184,7 @@ namespace Edgegap.Matchmaking
                     },
                     (string error, UnityWebRequest request) =>
                     {
-                        L._Error(error);
+                        L._Error($"Matchmaking | Ticket Create error.\n{error}");
                         _Abandon();
                     }
                 );
@@ -221,7 +221,7 @@ namespace Edgegap.Matchmaking
                     },
                     (string error, UnityWebRequest request) =>
                     {
-                        L._Error(error);
+                        L._Error($"Matchmaking | Group-Ticket Create error.\n{error}");
                         _Abandon();
                     }
                 );
@@ -247,7 +247,7 @@ namespace Edgegap.Matchmaking
         {
             if (Ticket.Current is null && Assignment.Current is null)
             {
-                L._Warn("No ticket or assignment found, stopped.");
+                L._Warn("Matchmaking | No ticket or assignment found, stopped.");
                 if (onCompleteDelegate is not null)
                 {
                     onCompleteDelegate();
@@ -319,7 +319,7 @@ namespace Edgegap.Matchmaking
             }
             catch (Exception e)
             {
-                L._Error($"Deserializing client version failed: {e.Message}");
+                L._Error($"Matchmaking | Deserializing client version failed.\n{e.Message}");
             }
 
             // skip reading ticket and assignment if version increased
@@ -342,7 +342,9 @@ namespace Edgegap.Matchmaking
             }
             catch (Exception e)
             {
-                L._Error($"Deserializing ticket failed, create new ticket.\n{e.Message}");
+                L._Error(
+                    $"Matchmaking | Deserializing ticket failed, create new ticket.\n{e.Message}"
+                );
             }
 
             try
@@ -358,7 +360,9 @@ namespace Edgegap.Matchmaking
             }
             catch (Exception e)
             {
-                L._Error($"Deserializing assignment failed, restart matchmaking.\n{e.Message}");
+                L._Error(
+                    $"Matchmaking | Deserializing assignment failed, restart matchmaking.\n{e.Message}"
+                );
             }
         }
 
@@ -439,7 +443,7 @@ namespace Edgegap.Matchmaking
                     }
                     catch (Exception e)
                     {
-                        L._Error($"Serializing {name} failed.\n{e.Message}");
+                        L._Error($"Matchmaking | Serializing '{name}' failed.\n{e.Message}");
                     }
                 }
             );
@@ -462,7 +466,9 @@ namespace Edgegap.Matchmaking
 
             if (LogPollingUpdates)
             {
-                Assignment._Notify("polling now");
+                Assignment._Notify(
+                    $"polling now ({consecutiveErrors + 1}/{MaxConsecutivePollingErrors})"
+                );
             }
 
             MatchmakingApi.GetTicketAsync(
@@ -496,20 +502,13 @@ namespace Edgegap.Matchmaking
                 {
                     if (consecutiveErrors + 1 > MaxConsecutivePollingErrors)
                     {
-                        Monitor._Notify(
-                            $"reached MaxConsecutivePollingErrors={MaxConsecutivePollingErrors}",
-                            ObservableActionType.Error
+                        L._Error(
+                            $"Matchmaking | Reached maximum assignment polling attempts.\n{error}"
                         );
                         _Abandon();
                     }
                     else
                     {
-                        L._Error(error);
-                        Monitor._Notify(
-                            $"polling error={consecutiveErrors + 1} < {MaxConsecutivePollingErrors}",
-                            ObservableActionType.Warn
-                        );
-
                         if (request.responseCode == 429 || request.responseCode >= 500)
                         {
                             Handler.StartCoroutine(
@@ -518,6 +517,7 @@ namespace Edgegap.Matchmaking
                         }
                         else
                         {
+                            L._Error($"Matchmaking | Assignment polling error.\n{error}");
                             _Abandon();
                         }
                     }
@@ -555,7 +555,7 @@ namespace Edgegap.Matchmaking
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    L._Warn(error);
+                    L._Warn($"Matchmaking | Ticket not found, skipping delete.\n{error}");
                     Assignment._Update(null, "abandon failed, deleted");
                     if (onCompletedDelegate is not null)
                     {

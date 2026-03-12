@@ -8,54 +8,52 @@ namespace Edgegap
     public class DeploymentEnvironmentDTO
     {
         [JsonProperty("ARBITRIUM_REQUEST_ID")]
-        public string RequestID { get; private set; }
+        public string RequestID { get; set; }
 
         [JsonProperty("ARBITRIUM_HOST_ID")]
-        public string HostID { get; private set; }
+        public string HostID { get; set; }
 
         [JsonProperty("ARBITRIUM_PUBLIC_IP")]
-        public string PublicIP { get; private set; }
+        public string PublicIP { get; set; }
 
         [JsonProperty("ARBITRIUM_DEPLOYMENT_TAGS")]
-        public List<string> Tags { get; private set; }
+        public List<string> Tags { get; set; }
 
         [JsonProperty("ARBITRIUM_HOST_BASE_CLOCK_FREQUENCY")]
-        public uint HostBaseClockFrequency { get; private set; }
+        public uint HostBaseClockFrequency { get; set; }
 
         [JsonProperty("ARBITRIUM_DEPLOYMENT_VCPU_UNITS")]
-        public uint DeploymentVCPUUnits { get; private set; }
+        public uint DeploymentVCPUUnits { get; set; }
 
         [JsonProperty("ARBITRIUM_DEPLOYMENT_MEMORY_MB")]
-        public uint DeploymentMemoryMB { get; private set; }
+        public uint DeploymentMemoryMB { get; set; }
 
         [JsonProperty("ARBITRIUM_DELETE_URL")]
-        public string SelfStopURL { get; private set; }
+        public string SelfStopURL { get; set; }
 
         [JsonProperty("ARBITRIUM_DELETE_TOKEN")]
-        public string SelfStopToken { get; private set; }
+        public string SelfStopToken { get; set; }
 
         [JsonProperty("ARBITRIUM_BEACON_ENABLED")]
-        public bool PrivateBeaconEnabled { get; private set; }
+        public bool PrivateBeaconEnabled { get; set; }
 
         [JsonProperty("ARBITRIUM_HOST_BEACON_PUBLIC_IP")]
-        public string BeaconPublicIP { get; private set; }
+        public string BeaconPublicIP { get; set; }
 
         [JsonProperty("ARBITRIUM_HOST_BEACON_PORT_UDP_EXTERNAL")]
-        public uint BeaconPortUDP { get; private set; }
+        public uint BeaconPortUDP { get; set; }
 
         [JsonProperty("ARBITRIUM_HOST_BEACON_PORT_TCP_EXTERNAL")]
-        public uint BeaconPortTCP { get; private set; }
+        public uint BeaconPortTCP { get; set; }
 
         [JsonProperty("ARBITRIUM_DEPLOYMENT_LOCATION")]
-        [JsonConverter(typeof(UnescapedStringConverter<LocationDTO>))]
-        public LocationDTO Location { get; private set; }
+        public LocationDTO Location { get; set; }
 
-        [JsonConverter(typeof(UnescapedStringConverter<PortMappingEnvironmentVariable>))]
         [JsonProperty("ARBITRIUM_PORTS_MAPPING")]
-        private PortMappingEnvironmentVariable _ports;
+        internal PortMappingEnvironmentVariable _ports;
 
         [JsonIgnore]
-        public Dictionary<string, PortMappingDTO> PortMapping { get; private set; }
+        public Dictionary<string, PortMappingDTO> PortMapping { get; set; }
 
         [OnError]
         internal void OnError(StreamingContext context, ErrorContext errorContext)
@@ -66,6 +64,9 @@ namespace Edgegap
         [OnDeserialized]
         internal void OnDeserializedMethod(StreamingContext context)
         {
+            if (_ports == null)
+                return;
+
             PortMapping = _ports.Ports;
             foreach (KeyValuePair<string, PortMappingDTO> entry in PortMapping)
             {
@@ -79,9 +80,14 @@ namespace Edgegap
         }
     }
 
-    internal class PortMappingEnvironmentVariable
+    public class PortMappingEnvironmentVariable
     {
         [JsonProperty("ports")]
-        public Dictionary<string, PortMappingDTO> Ports { get; private set; }
+        public Dictionary<string, PortMappingDTO> Ports { get; set; }
+
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
+        }
     }
 }

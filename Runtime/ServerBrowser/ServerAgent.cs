@@ -95,7 +95,7 @@ namespace Edgegap.ServerBrowser
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    L._Error(error);
+                    L._Error($"Server Browser | Monitor API error.\n{error}");
                     Monitor._Update(null, "error");
                 }
             );

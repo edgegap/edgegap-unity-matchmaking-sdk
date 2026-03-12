@@ -8,17 +8,17 @@ namespace Edgegap
         {
             if (!Debug.isDebugBuild)
                 return;
-            Debug.Log(message);
+            Debug.Log($"Edgegap {message}");
         }
 
         public static void _Warn<T>(T message)
         {
-            Debug.LogWarning(message);
+            Debug.LogWarning($"Edgegap {message}");
         }
 
         public static void _Error<T>(T message)
         {
-            Debug.LogError(message);
+            Debug.LogError($"Edgegap {message}");
         }
 
         public static string _FormatNotifyMessage<T>(
@@ -28,10 +28,7 @@ namespace Edgegap
             T value
         )
         {
-            return string.Join(
-                "\n",
-                new string[] { $"{service} | {subject}.notify / {message}", _ToStringOrNull(value) }
-            );
+            return $"{service} | {subject}.notify('{message}')\n{_ToStringOrNull(value)}";
         }
 
         public static string _FormatUpdateMessage<T>(
@@ -46,7 +43,7 @@ namespace Edgegap
                 "\n",
                 new string[]
                 {
-                    $"{service} | {subject}.changed / {message}",
+                    $"{service} | {subject}.changed('{message}')",
                     $"current: {_ToStringOrNull(current)}",
                     $"previous: {_ToStringOrNull(previous)}",
                 }

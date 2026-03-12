@@ -45,7 +45,7 @@ namespace Edgegap.Matchmaking
                     catch (Exception e)
                     {
                         L._Error(
-                            $"Couldn't parse monitor, consider updating Edgegap SDK. {e.Message}"
+                            $"Matchmaking | Couldn't parse monitor, update Edgegap SDK.\n{e.Message}"
                         );
                         throw;
                     }
@@ -74,7 +74,7 @@ namespace Edgegap.Matchmaking
                     catch (Exception e)
                     {
                         L._Error(
-                            $"Couldn't parse beacons, consider updating Edgegap SDK. {e.Message}"
+                            $"Matchmaking | Couldn't parse beacons, update Edgegap SDK.\n{e.Message}"
                         );
                         throw;
                     }
@@ -105,7 +105,7 @@ namespace Edgegap.Matchmaking
                     catch (Exception e)
                     {
                         L._Error(
-                            $"Couldn't parse assignment, consider updating Edgegap SDK. {e.Message}"
+                            $"Matchmaking | Couldn't parse assignment, update Edgegap SDK.\n{e.Message}"
                         );
                         throw;
                     }
@@ -135,7 +135,7 @@ namespace Edgegap.Matchmaking
                     catch (Exception e)
                     {
                         L._Error(
-                            $"Couldn't parse assignment, consider updating Edgegap SDK. {e.Message}"
+                            $"Matchmaking | Couldn't parse assignment, update Edgegap SDK.\n{e.Message}"
                         );
                         throw;
                     }
@@ -164,7 +164,7 @@ namespace Edgegap.Matchmaking
                     catch (Exception e)
                     {
                         L._Error(
-                            $"Couldn't parse assignment, consider updating Edgegap SDK. {e.Message}"
+                            $"Matchmaking | Couldn't parse assignment, update Edgegap SDK.\n{e.Message}"
                         );
                         throw;
                     }
