@@ -209,9 +209,10 @@ namespace Edgegap.Matchmaking
                     groupTicket,
                     (GroupTicketsResponseDTO assignment, UnityWebRequest request) =>
                     {
-                        Ticket._Update(groupTicket.Tickets.Last(), "saved");
+                        Ticket._Update((T)(groupTicket.Tickets.Last()), "saved");
                         Assignment._Update(assignment.Tickets.Last(), "received");
                         onSuccessDelegate(assignment.Tickets.SkipLast(1).ToList(), request);
+                        Polling = true;
                         Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
                     },
                     (string error, UnityWebRequest request) =>
@@ -234,6 +235,7 @@ namespace Edgegap.Matchmaking
             _Abandon(() =>
             {
                 Assignment._Update(assignment, "joined");
+                Polling = true;
                 Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
             });
         }
@@ -629,4 +631,3 @@ namespace Edgegap.Matchmaking
         #endregion
     }
 }
-
