@@ -39,11 +39,6 @@ namespace Edgegap.Matchmaking
             Current = value;
             UpdateEvent.Invoke(this, ObservableActionType.Update, message);
         }
-
-        public void _Update(object value, string message)
-        {
-            throw new NotImplementedException();
-        }
 #nullable disable
     }
 
