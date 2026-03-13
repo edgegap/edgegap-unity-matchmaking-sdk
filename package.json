@@ -1,6 +1,6 @@
 {
     "name": "com.edgegap.unity-matchmaking-sdk",
-    "version": "2.1.0",
+    "version": "2.1.1",
     "displayName": "Edgegap Matchmaking SDK",
     "description": "Get started quickly with Edgegap Matchmaking Matchmaking.",
     "unity": "2021.3",
