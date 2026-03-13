@@ -482,7 +482,7 @@ namespace Edgegap.Matchmaking
                         {
                             Handler.StartCoroutine(_ExpireAssignment());
                         }
-                        else if (Ticket.Current is not null)
+                        else
                         {
                             Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
                         }
