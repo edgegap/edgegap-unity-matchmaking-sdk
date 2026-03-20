@@ -1,77 +1,144 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
+using System.Linq;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 
 namespace Edgegap
 {
+    using L = Logger;
+
     public class DeploymentEnvironmentDTO
     {
-        [JsonProperty("ARBITRIUM_REQUEST_ID")]
-        public string RequestID { get; set; }
+        public string RequestID;
+        public string HostID;
+        public string PublicIP;
+        public List<string> Tags;
 
-        [JsonProperty("ARBITRIUM_HOST_ID")]
-        public string HostID { get; set; }
+        public uint HostBaseClockFrequency;
+        public uint DeploymentVCPUUnits;
+        public uint DeploymentMemoryMB;
 
-        [JsonProperty("ARBITRIUM_PUBLIC_IP")]
-        public string PublicIP { get; set; }
+        public string SelfStopURL;
+        public string SelfStopToken;
 
-        [JsonProperty("ARBITRIUM_DEPLOYMENT_TAGS")]
-        public List<string> Tags { get; set; }
+        public bool PrivateBeaconEnabled;
+        public string BeaconPublicIP;
+        public uint BeaconPortUDP;
+        public uint BeaconPortTCP;
 
-        [JsonProperty("ARBITRIUM_HOST_BASE_CLOCK_FREQUENCY")]
-        public uint HostBaseClockFrequency { get; set; }
+        public LocationDTO Location;
+        public Dictionary<string, PortMappingDTO> PortMapping;
 
-        [JsonProperty("ARBITRIUM_DEPLOYMENT_VCPU_UNITS")]
-        public uint DeploymentVCPUUnits { get; set; }
-
-        [JsonProperty("ARBITRIUM_DEPLOYMENT_MEMORY_MB")]
-        public uint DeploymentMemoryMB { get; set; }
-
-        [JsonProperty("ARBITRIUM_DELETE_URL")]
-        public string SelfStopURL { get; set; }
-
-        [JsonProperty("ARBITRIUM_DELETE_TOKEN")]
-        public string SelfStopToken { get; set; }
-
-        [JsonProperty("ARBITRIUM_BEACON_ENABLED")]
-        public bool PrivateBeaconEnabled { get; set; }
-
-        [JsonProperty("ARBITRIUM_HOST_BEACON_PUBLIC_IP")]
-        public string BeaconPublicIP { get; set; }
-
-        [JsonProperty("ARBITRIUM_HOST_BEACON_PORT_UDP_EXTERNAL")]
-        public uint BeaconPortUDP { get; set; }
-
-        [JsonProperty("ARBITRIUM_HOST_BEACON_PORT_TCP_EXTERNAL")]
-        public uint BeaconPortTCP { get; set; }
-
-        [JsonProperty("ARBITRIUM_DEPLOYMENT_LOCATION")]
-        public LocationDTO Location { get; set; }
-
-        [JsonProperty("ARBITRIUM_PORTS_MAPPING")]
-        internal PortMappingEnvironmentVariable _ports;
-
-        [JsonIgnore]
-        public Dictionary<string, PortMappingDTO> PortMapping { get; set; }
-
-        [OnError]
-        internal void OnError(StreamingContext context, ErrorContext errorContext)
+        public DeploymentEnvironmentDTO(IDictionary env)
         {
-            errorContext.Handled = true;
+            foreach (DictionaryEntry entry in env)
+            {
+                string key = entry.Key.ToString();
+
+                if (key == "ARBITRIUM_REQUEST_ID")
+                {
+                    RequestID = TryParseEnvVariableString(entry);
+                }
+                else if (key == "ARBITRIUM_HOST_ID")
+                {
+                    HostID = TryParseEnvVariableString(entry);
+                }
+                else if (key == "ARBITRIUM_PUBLIC_IP")
+                {
+                    PublicIP = TryParseEnvVariableString(entry);
+                }
+                else if (key == "ARBITRIUM_DEPLOYMENT_TAGS")
+                {
+                    Tags = TryParseEnvVariableString(entry).Split(",").ToList();
+                }
+                else if (key == "ARBITRIUM_HOST_BASE_CLOCK_FREQUENCY")
+                {
+                    HostBaseClockFrequency = TryParseEnvVariableUInt(entry);
+                }
+                else if (key == "ARBITRIUM_DEPLOYMENT_VCPU_UNITS")
+                {
+                    DeploymentVCPUUnits = TryParseEnvVariableUInt(entry);
+                }
+                else if (key == "ARBITRIUM_DEPLOYMENT_MEMORY_MB")
+                {
+                    DeploymentMemoryMB = TryParseEnvVariableUInt(entry);
+                }
+                else if (key == "ARBITRIUM_DELETE_URL")
+                {
+                    SelfStopURL = TryParseEnvVariableString(entry);
+                }
+                else if (key == "ARBITRIUM_DELETE_TOKEN")
+                {
+                    SelfStopToken = TryParseEnvVariableString(entry);
+                }
+                else if (key == "ARBITRIUM_BEACON_ENABLED")
+                {
+                    PrivateBeaconEnabled = TryParseEnvVariableBool(entry);
+                }
+                else if (key == "ARBITRIUM_HOST_BEACON_PUBLIC_IP")
+                {
+                    BeaconPublicIP = TryParseEnvVariableString(entry);
+                }
+                else if (key == "ARBITRIUM_HOST_BEACON_PORT_UDP_EXTERNAL")
+                {
+                    BeaconPortUDP = TryParseEnvVariableUInt(entry);
+                }
+                else if (key == "ARBITRIUM_HOST_BEACON_PORT_TCP_EXTERNAL")
+                {
+                    BeaconPortTCP = TryParseEnvVariableUInt(entry);
+                }
+                else if (key == "ARBITRIUM_DEPLOYMENT_LOCATION")
+                {
+                    Location = TryParseEnvVariableJSON<LocationDTO>(entry);
+                }
+                else if (key == "ARBITRIUM_PORTS_MAPPING")
+                {
+                    PortMapping = TryParseEnvVariableJSON<PortMappingEnvironmentVariable>(
+                        entry
+                    ).Ports;
+                }
+            }
         }
 
-        [OnDeserialized]
-        internal void OnDeserializedMethod(StreamingContext context)
+        public static string TryParseEnvVariableString(DictionaryEntry keyValuePair)
         {
-            if (_ports == null)
-                return;
+            return TryParseEnvVariable(keyValuePair, raw => raw ?? string.Empty);
+        }
 
-            PortMapping = _ports.Ports;
-            foreach (KeyValuePair<string, PortMappingDTO> entry in PortMapping)
+        public static uint TryParseEnvVariableUInt(DictionaryEntry keyValuePair)
+        {
+            return TryParseEnvVariable(keyValuePair, uint.Parse);
+        }
+
+        public static bool TryParseEnvVariableBool(DictionaryEntry keyValuePair)
+        {
+            return TryParseEnvVariable(keyValuePair, raw => raw == "true");
+        }
+
+        public static V TryParseEnvVariableJSON<V>(DictionaryEntry keyValuePair)
+        {
+            return TryParseEnvVariable(keyValuePair, JsonConvert.DeserializeObject<V>);
+        }
+
+        public static V TryParseEnvVariable<V>(
+            DictionaryEntry keyValuePair,
+            Func<string, V> convertFn
+        )
+        {
+            V value = default;
+            try
             {
-                entry.Value.Link = $"{RequestID}.pr.edgegap.net:{entry.Value.External}";
+                value = convertFn(keyValuePair.Value.ToString());
             }
+            catch (Exception e)
+            {
+                L._Warn(
+                    $"Edgegap Env | Couldn't parse variable '{keyValuePair.Key.ToString()}', "
+                        + $"consider updating Edgegap SDK.\n{e.Message}"
+                );
+            }
+            return value;
         }
 
         public override string ToString()
@@ -80,14 +147,9 @@ namespace Edgegap
         }
     }
 
-    public class PortMappingEnvironmentVariable
+    internal class PortMappingEnvironmentVariable
     {
         [JsonProperty("ports")]
         public Dictionary<string, PortMappingDTO> Ports { get; set; }
-
-        public override string ToString()
-        {
-            return JsonConvert.SerializeObject(this);
-        }
     }
 }

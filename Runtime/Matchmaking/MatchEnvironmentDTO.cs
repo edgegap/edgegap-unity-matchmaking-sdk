@@ -1,71 +1,65 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 
 namespace Edgegap.Matchmaking
 {
-    using L = Logger;
+    using Env = DeploymentEnvironmentDTO;
 
     public class MatchEnvironmentDTO<A>
     {
-        [JsonProperty("MM_MATCH_PROFILE")]
-        public string MatchProfile { get; set; }
+        public string MatchProfile;
+        public List<string> TicketIds;
+        public Dictionary<string, InjectedTicketDTO<A>> Tickets;
+        public Dictionary<string, List<string>> Groups;
+        public Dictionary<string, List<string>> Teams;
+        public string MatchId;
+        public Dictionary<string, string> Equality;
+        public Dictionary<string, List<string>> Intersection;
 
-        [JsonProperty("MM_TICKET_IDS")]
-        public List<string> TicketIds { get; set; }
-
-        [JsonIgnore]
-        public Dictionary<string, InjectedTicketDTO<A>> Tickets { get; set; }
-
-        [JsonProperty("MM_GROUPS")]
-        public Dictionary<string, List<string>> Groups { get; set; }
-
-        [JsonProperty("MM_TEAMS")]
-        public Dictionary<string, List<string>> Teams { get; set; }
-
-        [JsonProperty("MM_MATCH_ID")]
-        public string MatchId { get; set; }
-
-        [JsonProperty("MM_EQUALITY")]
-        public Dictionary<string, string> Equality { get; set; }
-
-        [JsonProperty("MM_INTERSECTION")]
-        public Dictionary<string, List<string>> Intersection { get; set; }
-
-        [OnError]
-        internal void OnError(StreamingContext context, ErrorContext errorContext)
-        {
-            errorContext.Handled = true;
-        }
-
-        [OnDeserialized]
-        internal void OnDeserializedMethod(StreamingContext context)
+        public MatchEnvironmentDTO(IDictionary env)
         {
             Tickets = new Dictionary<string, InjectedTicketDTO<A>>();
 
-            foreach (DictionaryEntry envEntry in Environment.GetEnvironmentVariables())
+            foreach (DictionaryEntry entry in env)
             {
-                if (!envEntry.Key.ToString().StartsWith("MM_TICKET_"))
+                string key = entry.Key.ToString();
+                if (key == "MM_MATCH_PROFILE")
                 {
-                    continue;
+                    MatchProfile = Env.TryParseEnvVariableString(entry);
                 }
-                InjectedTicketDTO<A> ticket = JsonConvert.DeserializeObject<InjectedTicketDTO<A>>(
-                    envEntry.Value.ToString()
-                );
-                Tickets[ticket.ID] = ticket;
-            }
-
-            if (TicketIds == null)
-                TicketIds = new List<string>();
-
-            foreach (string id in TicketIds)
-            {
-                if (!Tickets.ContainsKey(id))
+                else if (key == "MM_TICKET_IDS")
                 {
-                    L._Warn($"Match Data | Ticket data not found for injected ticket ID {id}.");
+                    TicketIds = Env.TryParseEnvVariableJSON<List<string>>(entry);
+                }
+                else if (key == "MM_GROUPS")
+                {
+                    Groups = Env.TryParseEnvVariableJSON<Dictionary<string, List<string>>>(entry);
+                }
+                else if (key == "MM_TEAMS")
+                {
+                    Teams = Env.TryParseEnvVariableJSON<Dictionary<string, List<string>>>(entry);
+                }
+                else if (key == "MM_MATCH_ID")
+                {
+                    MatchId = Env.TryParseEnvVariableString(entry);
+                }
+                else if (key == "MM_EQUALITY")
+                {
+                    Equality = Env.TryParseEnvVariableJSON<Dictionary<string, string>>(entry);
+                }
+                else if (key == "MM_INTERSECTION")
+                {
+                    Intersection = Env.TryParseEnvVariableJSON<Dictionary<string, List<string>>>(
+                        entry
+                    );
+                }
+                else if (key.StartsWith("MM_TICKET_"))
+                {
+                    InjectedTicketDTO<A> ticket = Env.TryParseEnvVariableJSON<InjectedTicketDTO<A>>(
+                        entry
+                    );
+                    Tickets[ticket.ID] = ticket;
                 }
             }
         }

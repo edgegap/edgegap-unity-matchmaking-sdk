@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Linq;
 using Edgegap;
 using Edgegap.Matchmaking;
-using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -44,134 +43,45 @@ public class MatchmakingServerAgent : MonoBehaviour
         mockEnv = true;
 #endif
 
-        string stringEnv = JsonConvert.SerializeObject(env);
-        DeploymentEnv = JsonConvert.DeserializeObject<DeploymentEnvironmentDTO>(stringEnv);
-        MatchEnv = JsonConvert.DeserializeObject<MatchEnvironmentDTO<MyTicketsAttributes>>(
-            stringEnv
-        );
-
         #region mock data
         mockEnv = mockEnv || !string.IsNullOrEmpty(env["ARBITRIUM_MOCK_ENV"].ToString());
         if (mockEnv)
         {
             // define mock env variables here
-            DeploymentEnv.RequestID = "Editor";
-            DeploymentEnv.PublicIP = "172.236.117.196";
-            DeploymentEnv.Tags = "tag1,tag2".Split(",").ToList();
-            DeploymentEnv.HostBaseClockFrequency = 2000;
-            DeploymentEnv.DeploymentVCPUUnits = 1536;
-            DeploymentEnv.DeploymentMemoryMB = 3072;
-            DeploymentEnv.Location = new LocationDTO()
-            {
-                City = "Chicago",
-                Country = "United States of America",
-                Continent = "North America",
-                AdministrativeDivision = "Illinois",
-                Timezone = "Central Time",
-            };
-            DeploymentEnv.PortMapping = new Dictionary<string, PortMappingDTO>()
-            {
-                {
-                    "gameport",
-                    new PortMappingDTO()
-                    {
-                        Internal = "7777",
-                        External = "32013",
-                        Protocol = "UDP",
-                    }
-                },
-            };
+            env["ARBITRIUM_REQUEST_ID"] = "Editor";
+            env["ARBITRIUM_PUBLIC_IP"] = "172.236.117.196";
+            env["ARBITRIUM_DEPLOYMENT_TAGS"] = "tag1,tag2";
+            env["ARBITRIUM_HOST_BASE_CLOCK_FREQUENCY"] = "2000";
+            env["ARBITRIUM_DEPLOYMENT_VCPU_UNITS"] = "1536";
+            env["ARBITRIUM_DEPLOYMENT_MEMORY_MB"] = "3072";
+            env["ARBITRIUM_DEPLOYMENT_LOCATION"] =
+                "{\"city\":\"Chicago\",\"country\":\"United States of America\",\"continent\":\"North America\",\"administrative_division\":\"Illinois\",\"timezone\":\"Central Time\"}";
+            env["ARBITRIUM_PORTS_MAPPING"] =
+                "{\"ports\":{\"gameport\":{\"name\":\"GamePort\",\"internal\":7777,\"external\":31504,\"protocol\":\"UDP\"}}}";
 
-            MatchEnv.MatchProfile = "advanced-example";
-            MatchEnv.Tickets = new Dictionary<string, InjectedTicketDTO<MyTicketsAttributes>>()
-            {
-                {
-                    "cusfn10msflc73beiik0",
-                    new InjectedTicketDTO<MyTicketsAttributes>()
-                    {
-                        ID = "cusfn10msflc73beiik0",
-                        CreatedAt = DateTime.Parse(
-                            "2025-02-21T22:17:42.3886970Z",
-                            CultureInfo.InvariantCulture,
-                            DateTimeStyles.RoundtripKind
-                        ),
-                        PlayerIP = "174.93.233.25",
-                        GroupID = "b2080c27-19c9-4fb0-8fe7-4bf1e5d285d1",
-                        TeamID = "cusfn1gmsflc73beiim0",
-                        Attributes = new MyTicketsAttributes(
-                            new Dictionary<string, float>()
-                            {
-                                { "Chicago", 12.3f },
-                                { "Los Angeles", 145.6f },
-                                { "Tokyo", 233.2f },
-                            }
-                        ),
-                    }
-                },
-                {
-                    "cusfn18msflc73beiil0",
-                    new InjectedTicketDTO<MyTicketsAttributes>()
-                    {
-                        ID = "cusfn18msflc73beiil0",
-                        CreatedAt = DateTime.Parse(
-                            "2025-02-21T22:17:42.2548390Z",
-                            CultureInfo.InvariantCulture,
-                            DateTimeStyles.RoundtripKind
-                        ),
-                        PlayerIP = "174.93.233.23",
-                        GroupID = "015d4dc8-6c79-4b5c-bbc6-f309b9787c8f",
-                        TeamID = "cusfn1gmsflc73beiim0",
-                        Attributes = new MyTicketsAttributes(
-                            new Dictionary<string, float>()
-                            {
-                                { "Chicago", 87.3f },
-                                { "LosAngeles", 32.4f },
-                                { "Tokyo", 253.2f },
-                            }
-                        ),
-                    }
-                },
-            };
-            MatchEnv.TicketIds = MatchEnv.Tickets.Keys.ToList();
-            MatchEnv.Groups = new Dictionary<string, List<string>>()
-            {
-                {
-                    "b2080c27-19c9-4fb0-8fe7-4bf1e5d285d1",
-                    "cusfn10msflc73beiik0".Split(",").ToList()
-                },
-                {
-                    "015d4dc8-6c79-4b5c-bbc6-f309b9787c8f",
-                    "cusfn18msflc73beiil0".Split(",").ToList()
-                },
-            };
-            MatchEnv.Teams = new Dictionary<string, List<string>>()
-            {
-                {
-                    "cusfn1gmsflc73beiim0",
-                    "b2080c27-19c9-4fb0-8fe7-4bf1e5d285d1,015d4dc8-6c79-4b5c-bbc6-f309b9787c8f"
-                        .Split(",")
-                        .ToList()
-                },
-            };
-            MatchEnv.Equality = new Dictionary<string, string>()
-            {
-                { "selected_game_mode", "quickplay" },
-            };
-            MatchEnv.Intersection = new Dictionary<string, List<string>>()
-            {
-                { "selected_map", "Airport".Split(",").ToList() },
-                { "backfill_group_size", "new,1".Split(",").ToList() },
-            };
+            env["MM_MATCH_PROFILE"] = "advanced-example";
+            env["MM_TICKET_IDS"] = "[\"cusfn10msflc73beiik0\",\"cusfn18msflc73beiil0\"]";
+            env["MM_TICKET_cusfn10msflc73beiik0"] =
+                "{\"id\":\"cusfn10msflc73beiik0\",\"created_at\":\"2025-02-21T22:17:42.388697Z\",\"player_ip\":\"174.93.233.25\",\"group_id\":\"b2080c27-19c9-4fb0-8fe7-4bf1e5d285d1\",\"team_id\":\"cusfn1gmsflc73beiim0\",\"attributes\":{\"beacons\":{\"Chicago\":12.3,\"Los Angeles\":145.6,\"Tokyo\":233.2}}}";
+            env["MM_TICKET_cusfn18msflc73beiil0"] =
+                "{\"id\":\"cusfn18msflc73beiil0\",\"created_at\":\"2025-02-21T22:17:42.254839Z\",\"player_ip\":\"174.93.233.23\",\"group_id\":\"015d4dc8-6c79-4b5c-bbc6-f309b9787c8f\",\"team_id\":\"cusfn1gmsflc73beiim0\",\"attributes\":{\"beacons\":{\"Chicago\":87.3,\"LosAngeles\":32.4,\"Tokyo\":253.2}}}";
+            env["MM_GROUPS"] =
+                "{\"b2080c27-19c9-4fb0-8fe7-4bf1e5d285d1\":[\"cusfn10msflc73beiik0\"],\"015d4dc8-6c79-4b5c-bbc6-f309b9787c8f\":[\"cusfn18msflc73beiil0\"]}";
+            env["MM_TEAMS"] =
+                "{\"cusfn1gmsflc73beiim0\":[\"b2080c27-19c9-4fb0-8fe7-4bf1e5d285d1\",\"015d4dc8-6c79-4b5c-bbc6-f309b9787c8f\"]}";
+            env["MM_MATCH_ID"] = "advanced-example_initial-2025-02-21T22:17:43.3886970Z";
+            env["MM_EQUALITY"] = "{\"selected_game_mode\":\"quickplay\"}";
+            env["MM_INTERSECTION"] =
+                "{\"selected_map\":[\"Airport\"],\"backfill_group_size\":[\"new\",\"1\"]}";
         }
         #endregion
+
+        DeploymentEnv = new DeploymentEnvironmentDTO(env);
+        MatchEnv = new MatchEnvironmentDTO<MyTicketsAttributes>(env);
 
         L._Log(
             $"Server Handler | Started successfully for deployment '{DeploymentEnv.RequestID}'."
         );
-
-        L._Log($"Matchmaking | {MatchEnv}");
-
-        Debug.Log(DeploymentEnv);
     }
 
     public void SelfStopDeployment()
