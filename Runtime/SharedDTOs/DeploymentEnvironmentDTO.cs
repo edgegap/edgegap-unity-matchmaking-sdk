@@ -30,6 +30,8 @@ namespace Edgegap
         public LocationDTO Location;
         public Dictionary<string, PortMappingDTO> PortMapping;
 
+        public string Fqdn => string.IsNullOrEmpty(RequestID) ? "" : $"{RequestID}.pr.edgegap.net";
+
         public DeploymentEnvironmentDTO(IDictionary env)
         {
             foreach (DictionaryEntry entry in env)

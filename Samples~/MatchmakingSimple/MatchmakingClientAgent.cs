@@ -134,7 +134,7 @@ public class MatchmakingClientAgent : MonoBehaviour
                     && (
                         message.Contains("received")
                         || message.Contains("updated")
-                        || message.Contains("abandoned")
+                        || message.Contains("abandon")
                     )
                 )
                 {

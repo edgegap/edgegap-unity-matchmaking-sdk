@@ -41,9 +41,9 @@ namespace Edgegap.Matchmaking
         public bool LogPollingUpdates;
 
         public Observable<MonitorResponseDTO> Monitor { get; private set; } =
-            new Observable<MonitorResponseDTO> { };
+            new Observable<MonitorResponseDTO>() { };
         public Observable<TicketResponseDTO> Assignment { get; private set; } =
-            new Observable<TicketResponseDTO> { };
+            new Observable<TicketResponseDTO>() { };
         public Observable<T> Ticket { get; private set; } = new Observable<T> { };
         private protected bool Polling = false;
 
@@ -110,8 +110,7 @@ namespace Edgegap.Matchmaking
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    L._Error($"Matchmaking | Monitor API error.\n{error}");
-                    Monitor._Update(null, "error");
+                    Monitor._Error($"get monitor failed (unexpected error)\n{error}", null);
                 }
             );
         }
@@ -128,7 +127,7 @@ namespace Edgegap.Matchmaking
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    L._Error($"Matchmaking | Beacons API error.\n{error}");
+                    Monitor._Error($"get beacons failed\n{error}");
                     onErrorDelegate(error, request);
                 }
             );
@@ -154,24 +153,23 @@ namespace Edgegap.Matchmaking
             if (Assignment.Current.Status == "HOST_ASSIGNED")
             {
                 Assignment._Notify("cached, reconnect suggested");
+                return;
             }
-            else
-            {
-                Assignment._Notify("cached, resuming polling");
-                Polling = true;
-                Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
-            }
+
+            Assignment._Notify("cached, resuming polling");
+            Polling = true;
+            Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
         }
 
         public void StartMatchmaking(T ticket, bool abandon = false)
         {
             if (Assignment.Current is not null && !abandon)
             {
-                Assignment._Notify("cached, resume or abandon", ObservableActionType.Error);
+                Assignment._Error("cached, resume or abandon");
                 return;
             }
 
-            _Abandon(() =>
+            StopMatchmaking(() =>
             {
                 MatchmakingApi.CreateTicketAsync(
                     ticket,
@@ -184,8 +182,8 @@ namespace Edgegap.Matchmaking
                     },
                     (string error, UnityWebRequest request) =>
                     {
-                        L._Error($"Matchmaking | Ticket Create error.\n{error}");
-                        _Abandon();
+                        Ticket._Error($"create failed\n{error}");
+                        StopMatchmaking();
                     }
                 );
             });
@@ -200,7 +198,7 @@ namespace Edgegap.Matchmaking
         {
             if (Assignment.Current is not null && !abandon)
             {
-                Assignment._Notify("cached, resume or abandon", ObservableActionType.Error);
+                Assignment._Error("cached, resume or abandon");
                 return;
             }
 
@@ -208,7 +206,7 @@ namespace Edgegap.Matchmaking
                 memberTickets.Append(hostTicket).ToArray()
             );
 
-            _Abandon(() =>
+            StopMatchmaking(() =>
             {
                 MatchmakingApi.CreateGroupTicketAsync(
                     groupTicket,
@@ -217,12 +215,13 @@ namespace Edgegap.Matchmaking
                         Ticket._Update(groupTicket.Tickets.Last(), "saved");
                         Assignment._Update(assignment.Tickets.Last(), "received");
                         onSuccessDelegate(assignment.Tickets.SkipLast(1).ToList(), request);
+                        Polling = true;
                         Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
                     },
                     (string error, UnityWebRequest request) =>
                     {
-                        L._Error($"Matchmaking | Group-Ticket Create error.\n{error}");
-                        _Abandon();
+                        Ticket._Error($"create failed\n{error}");
+                        StopMatchmaking();
                     }
                 );
             });
@@ -232,31 +231,63 @@ namespace Edgegap.Matchmaking
         {
             if (Assignment.Current is not null && !abandon)
             {
-                Assignment._Notify("cached, resume or abandon", ObservableActionType.Error);
+                Assignment._Error("cached, resume or abandon");
                 return;
             }
 
-            _Abandon(() =>
+            StopMatchmaking(() =>
             {
                 Assignment._Update(assignment, "joined");
+                Polling = true;
                 Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
             });
         }
 
-        public void StopMatchmaking(Action onCompleteDelegate = null)
+        public void StopMatchmaking(Action onCompletedDelegate = null)
         {
-            if (Ticket.Current is null && Assignment.Current is null)
+            Polling = false;
+            Ticket._Update(null, "abandoned");
+
+            if (Assignment.Current is null)
             {
-                L._Warn("Matchmaking | No ticket or assignment found, stopped.");
-                if (onCompleteDelegate is not null)
+                Assignment._Update(null, "abandoned");
+                if (onCompletedDelegate is not null)
                 {
-                    onCompleteDelegate();
+                    onCompletedDelegate();
                 }
             }
-            else
-            {
-                _Abandon(onCompleteDelegate);
-            }
+
+            MatchmakingApi.DeleteTicketAsync(
+                Assignment.Current.ID,
+                (UnityWebRequest request) =>
+                {
+                    Assignment._Update(null, "abandoned");
+                    if (onCompletedDelegate is not null)
+                    {
+                        onCompletedDelegate();
+                    }
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    if (request.responseCode == 409)
+                    {
+                        Assignment._Update(null, "abandon failed (already matched), deleted cache");
+                    }
+                    else if (request.responseCode == 404)
+                    {
+                        Assignment._Update(null, "abandon failed (not found), deleted cache");
+                    }
+                    else
+                    {
+                        Assignment._Error($"abandon failed\n{error}", null);
+                    }
+
+                    if (onCompletedDelegate is not null)
+                    {
+                        onCompletedDelegate();
+                    }
+                }
+            );
         }
         #endregion
 
@@ -319,7 +350,7 @@ namespace Edgegap.Matchmaking
             }
             catch (Exception e)
             {
-                L._Error($"Matchmaking | Deserializing client version failed.\n{e.Message}");
+                Monitor._Error($"deserializing client version failed, cache disabled\n{e.Message}");
             }
 
             // skip reading ticket and assignment if version increased
@@ -342,9 +373,7 @@ namespace Edgegap.Matchmaking
             }
             catch (Exception e)
             {
-                L._Error(
-                    $"Matchmaking | Deserializing ticket failed, create new ticket.\n{e.Message}"
-                );
+                Ticket._Error($"deserializing ticket failed, create new ticket\n{e.Message}");
             }
 
             try
@@ -360,8 +389,8 @@ namespace Edgegap.Matchmaking
             }
             catch (Exception e)
             {
-                L._Error(
-                    $"Matchmaking | Deserializing assignment failed, restart matchmaking.\n{e.Message}"
+                Assignment._Error(
+                    $"deserializing assignment failed, restart matchmaking\n{e.Message}"
                 );
             }
         }
@@ -505,7 +534,8 @@ namespace Edgegap.Matchmaking
                         L._Error(
                             $"Matchmaking | Reached maximum assignment polling attempts.\n{error}"
                         );
-                        _Abandon();
+                        Assignment._Error($"polling failed, reached maximum retries\n{error}");
+                        StopMatchmaking();
                     }
                     else
                     {
@@ -517,49 +547,9 @@ namespace Edgegap.Matchmaking
                         }
                         else
                         {
-                            L._Error($"Matchmaking | Assignment polling error.\n{error}");
-                            _Abandon();
+                            Assignment._Error($"polling failed, retrying\n{error}");
+                            StopMatchmaking();
                         }
-                    }
-                }
-            );
-        }
-
-        internal void _Abandon(Action onCompletedDelegate = null)
-        {
-            Polling = false;
-
-            if (Ticket.Current is not null)
-            {
-                Ticket._Update(null, "abandoned");
-            }
-
-            if (Assignment.Current is null)
-            {
-                if (onCompletedDelegate is not null)
-                {
-                    onCompletedDelegate();
-                }
-                return;
-            }
-
-            MatchmakingApi.DeleteTicketAsync(
-                Assignment.Current.ID,
-                (UnityWebRequest request) =>
-                {
-                    Assignment._Update(null, "abandoned");
-                    if (onCompletedDelegate is not null)
-                    {
-                        onCompletedDelegate();
-                    }
-                },
-                (string error, UnityWebRequest request) =>
-                {
-                    L._Warn($"Matchmaking | Ticket not found, skipping delete.\n{error}");
-                    Assignment._Update(null, "abandon failed, deleted");
-                    if (onCompletedDelegate is not null)
-                    {
-                        onCompletedDelegate();
                     }
                 }
             );
