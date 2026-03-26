@@ -55,11 +55,6 @@ namespace Edgegap
             Error = error;
             UpdateEvent.Invoke(this, ObservableActionType.Error, error);
         }
-
-        public void _Update(object value, string message)
-        {
-            throw new NotImplementedException();
-        }
 #nullable disable
     }
 

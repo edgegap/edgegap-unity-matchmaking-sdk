@@ -212,7 +212,7 @@ namespace Edgegap.Matchmaking
                     groupTicket,
                     (GroupTicketsResponseDTO assignment, UnityWebRequest request) =>
                     {
-                        Ticket._Update(groupTicket.Tickets.Last(), "saved");
+                        Ticket._Update((T)(groupTicket.Tickets.Last()), "saved");
                         Assignment._Update(assignment.Tickets.Last(), "received");
                         onSuccessDelegate(assignment.Tickets.SkipLast(1).ToList(), request);
                         Polling = true;
@@ -517,7 +517,7 @@ namespace Edgegap.Matchmaking
                         {
                             Handler.StartCoroutine(_ExpireAssignment());
                         }
-                        else if (Ticket.Current is not null)
+                        else
                         {
                             Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
                         }
