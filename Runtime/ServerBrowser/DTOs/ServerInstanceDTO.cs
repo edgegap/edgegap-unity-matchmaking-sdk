@@ -1,12 +1,21 @@
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace Edgegap.ServerBrowser
 {
-    public abstract class ServerInstanceDTO<ServerInstanceMetadata>
+    public class ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata>
+        where ServerInstanceMetadata : MetadataDTO
+        where SlotMetadata : MetadataDTO
     {
         [JsonProperty("request_id")]
         public string RequestID;
+
+        [JsonProperty("created_at")]
+        public DateTime CreatedAt;
+
+        [JsonProperty("updated_at")]
+        public DateTime UpdatedAt;
 
         [JsonProperty("metadata")]
         public ServerInstanceMetadata Metadata;
@@ -15,7 +24,7 @@ namespace Edgegap.ServerBrowser
         public DeploymentDTO Server;
 
         [JsonProperty("slots")]
-        public List<SlotDTO> Slots;
+        public List<SlotDTO<SlotMetadata>> Slots;
 
         public override string ToString()
         {

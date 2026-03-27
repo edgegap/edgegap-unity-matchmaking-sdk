@@ -255,6 +255,7 @@ namespace Edgegap.Matchmaking
                 {
                     onCompletedDelegate();
                 }
+                return;
             }
 
             MatchmakingApi.DeleteTicketAsync(
@@ -419,6 +420,12 @@ namespace Edgegap.Matchmaking
                             )
                         );
                     }
+                    else if (type == ObservableActionType.Error)
+                    {
+                        L._Error(
+                            L._FormatErrorMessage("Matchmaking", subject, message, obs.Current)
+                        );
+                    }
                     else
                     {
                         string log = L._FormatNotifyMessage(
@@ -431,13 +438,9 @@ namespace Edgegap.Matchmaking
                         {
                             L._Log(log);
                         }
-                        else if (type == ObservableActionType.Warn)
-                        {
-                            L._Warn(log);
-                        }
                         else
                         {
-                            L._Error(log);
+                            L._Warn(log);
                         }
                     }
                 }

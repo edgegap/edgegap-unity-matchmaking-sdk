@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -7,15 +8,16 @@ namespace Edgegap.ServerBrowser
 {
     using L = Logger;
 
-    public class Api<ServerInstanceMetadata>
+    public class Api<ServerInstanceMetadata, SlotMetadata>
         where ServerInstanceMetadata : MetadataDTO
+        where SlotMetadata : MetadataDTO
     {
         internal SafeHttpRequest Request;
         internal string AuthToken;
         internal string BaseUrl;
 
         internal string PATH_MONITOR = "monitor";
-        internal string PATH_SERVER_INSTANCES = "/server-instances";
+        internal string PATH_SERVER_INSTANCES = "server-instances";
 
         public Api(MonoBehaviour parent, string authToken, string baseUrl)
         {
@@ -25,7 +27,7 @@ namespace Edgegap.ServerBrowser
         }
 
         public void GetMonitor(
-            Action<MonitorDTO, UnityWebRequest> onSuccessDelegate,
+            Action<MonitorResponseDTO, UnityWebRequest> onSuccessDelegate,
             Action<string, UnityWebRequest> onErrorDelegate
         )
         {
@@ -36,7 +38,8 @@ namespace Edgegap.ServerBrowser
                 {
                     try
                     {
-                        MonitorDTO monitor = JsonConvert.DeserializeObject<MonitorDTO>(response);
+                        MonitorResponseDTO monitor =
+                            JsonConvert.DeserializeObject<MonitorResponseDTO>(response);
                         onSuccessDelegate(monitor, request);
                     }
                     catch (Exception e)
@@ -53,8 +56,11 @@ namespace Edgegap.ServerBrowser
         }
 
         public void CreateServerInstance(
-            ServerInstanceDTO<ServerInstanceMetadata> serverInstance,
-            Action<ServerInstanceDTO<ServerInstanceMetadata>, UnityWebRequest> onSuccessDelegate,
+            ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata> serverInstance,
+            Action<
+                ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata>,
+                UnityWebRequest
+            > onSuccessDelegate,
             Action<string, UnityWebRequest> onErrorDelegate
         )
         {
@@ -66,9 +72,9 @@ namespace Edgegap.ServerBrowser
                 {
                     try
                     {
-                        ServerInstanceDTO<ServerInstanceMetadata> instance =
+                        ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata> instance =
                             JsonConvert.DeserializeObject<
-                                ServerInstanceDTO<ServerInstanceMetadata>
+                                ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata>
                             >(response);
                         onSuccessDelegate(instance, request);
                     }
@@ -76,6 +82,86 @@ namespace Edgegap.ServerBrowser
                     {
                         L._Error(
                             $"Server Browser | Couldn't parse server instance, update Edgegap SDK.\n{e.Message}"
+                        );
+                        throw;
+                    }
+                },
+                onErrorDelegate,
+                3
+            );
+        }
+
+        public void DeleteServerInstance(
+            string requestID,
+            Action<UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate
+        )
+        {
+            Request.Delete(
+                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}",
+                AuthToken,
+                (string response, UnityWebRequest request) =>
+                {
+                    onSuccessDelegate(request);
+                },
+                onErrorDelegate,
+                3
+            );
+        }
+
+        public void KeepAliveServerInstance(
+            string requestID,
+            Action<KeepAliveResponseDTO, UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate
+        )
+        {
+            Request.Post(
+                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}:keep-alive",
+                AuthToken,
+                "",
+                (string response, UnityWebRequest request) =>
+                {
+                    try
+                    {
+                        KeepAliveResponseDTO keepalive =
+                            JsonConvert.DeserializeObject<KeepAliveResponseDTO>(response);
+                        onSuccessDelegate(keepalive, request);
+                    }
+                    catch (Exception e)
+                    {
+                        L._Error(
+                            $"Server Browser | Couldn't parse keepalive, update Edgegap SDK.\n{e.Message}"
+                        );
+                        throw;
+                    }
+                },
+                onErrorDelegate
+            );
+        }
+
+        public void ConfirmReservations(
+            string requestID,
+            List<string> userIDs,
+            Action<ConfirmReservationsResponseDTO, UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate
+        )
+        {
+            Request.Post(
+                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}:confirm",
+                AuthToken,
+                JsonConvert.SerializeObject(userIDs),
+                (string response, UnityWebRequest request) =>
+                {
+                    try
+                    {
+                        ConfirmReservationsResponseDTO confirmation =
+                            JsonConvert.DeserializeObject<ConfirmReservationsResponseDTO>(response);
+                        onSuccessDelegate(confirmation, request);
+                    }
+                    catch (Exception e)
+                    {
+                        L._Error(
+                            $"Server Browser | Couldn't parse reservation confirmations, update Edgegap SDK.\n{e.Message}"
                         );
                         throw;
                     }

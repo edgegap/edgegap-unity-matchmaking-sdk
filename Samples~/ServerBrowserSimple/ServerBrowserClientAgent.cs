@@ -91,10 +91,4 @@ public class ServerBrowserClientAgent : MonoBehaviour
             }
         );
     }
-
-    public class MyServerInstanceMetadata : MetadataDTO
-    {
-        [JsonProperty("is_ranked")]
-        public bool IsRanked;
-    }
 }

@@ -50,6 +50,16 @@ namespace Edgegap
             );
         }
 
+        public static string _FormatErrorMessage<T>(
+            string service,
+            string subject,
+            string message,
+            T value
+        )
+        {
+            return $"{service} | {subject}.error:{message}\n{_ToStringOrNull(value)}";
+        }
+
         public static string _ToStringOrNull<T>(T value)
         {
             return value is null ? "null" : value.ToString();

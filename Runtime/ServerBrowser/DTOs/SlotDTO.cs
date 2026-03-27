@@ -2,25 +2,18 @@ using Newtonsoft.Json;
 
 namespace Edgegap.ServerBrowser
 {
-    public class SlotDTO
+    public class SlotDTO<SlotMetadata>
+        where SlotMetadata : MetadataDTO
     {
         [JsonProperty("name")]
         public string Name;
 
         [JsonProperty("metadata")]
-        public MetadataDTO Metadata;
+        public SlotMetadata Metadata;
 
         [JsonProperty("available_seats")]
         public uint AvailableSeats;
 
-        public override string ToString()
-        {
-            return JsonConvert.SerializeObject(this);
-        }
-    }
-
-    public class SlotResponseDTO : SlotDTO
-    {
         [JsonProperty("reserved_seats")]
         public uint ReservedSeats;
 

@@ -101,6 +101,11 @@ namespace Edgegap
                     ).Ports;
                 }
             }
+
+            foreach (PortMappingDTO port in PortMapping.Values)
+            {
+                port.Link ??= $"{Fqdn}:{port.External}";
+            }
         }
 
         public static string TryParseEnvVariableString(DictionaryEntry keyValuePair)

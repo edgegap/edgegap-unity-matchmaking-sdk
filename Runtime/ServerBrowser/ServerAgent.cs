@@ -1,16 +1,21 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
+using Random = UnityEngine.Random;
 
 namespace Edgegap.ServerBrowser
 {
     using L = Logger;
 
-    public class ServerAgent<ServerInstanceMetadata>
+    public class ServerAgent<ServerInstanceMetadata, SlotMetadata>
         where ServerInstanceMetadata : MetadataDTO
+        where SlotMetadata : MetadataDTO
     {
-        private Api<ServerInstanceMetadata> ServerBrowserApi;
+        private Api<ServerInstanceMetadata, SlotMetadata> Api;
         private Edgegap.Ping Ping;
 
         public MonoBehaviour Handler;
@@ -20,40 +25,27 @@ namespace Edgegap.ServerBrowser
         public string AuthToken { private get; set; }
 
         public int RequestTimeoutSeconds;
-        public float PollingBackoffSeconds;
-        public int MaxConsecutivePollingErrors;
+        public float HeartbeatIntervalSeconds;
+        public int HeartbeatMaxConsecutiveErrors;
 
-        //public bool SaveStateInPlayerPrefs;
-        //public string ClientVersion;
-        //public float RemoveAssignmentSeconds;
+        public Observable<MonitorResponseDTO> Monitor { get; private set; } =
+            new Observable<MonitorResponseDTO> { };
+        public Observable<ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata>> Instance
+        {
+            get;
+            private set;
+        } = new Observable<ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata>>() { };
 
-        //internal string PLAYER_PREFS_KEY_VERSION;
-        //internal string PLAYER_PREFS_KEY_TICKET;
-        //internal string PLAYER_PREFS_KEY_ASSIGNMENT;
-
-        //public bool LogTicketUpdates;
-        //public bool LogAssignmentUpdates;
-        //public bool LogPollingUpdates;
-
-        public Observable<MonitorDTO> Monitor { get; private set; } =
-            new Observable<MonitorDTO> { };
+        public Observable<ConnectionsDTO> Connections { get; private set; } =
+            new Observable<ConnectionsDTO>() { };
 
         public ServerAgent(
             MonoBehaviour handler,
             string baseUrl,
             string authToken,
-            int requestTimeoutSeconds = 3,
-            float pollingBackoffSeconds = 1f,
-            int maxConsecutivePollingErrors = 10
-        //bool saveStateInPlayerPrefs = true,
-        //string clientVersion = "1.0.0",
-        //float removeAssignmentSeconds = 30f,
-        //string pLAYER_PREFS_KEY_VERSION = "EdgegapMatchmakingClientVersion",
-        //string pLAYER_PREFS_KEY_TICKET = "EdgegapMatchmakingClientTicket",
-        //string pLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapMatchmakingClientAssignment",
-        //bool logTicketUpdates = true,
-        //bool logAssignmentUpdates = true,
-        //bool logPollingUpdates = false
+            int requestTimeoutSeconds = 10,
+            float heartbeatIntervalSeconds = 10f,
+            int heartbeatMaxConsecutiveErrors = 10
         )
         {
             Handler = handler;
@@ -62,27 +54,15 @@ namespace Edgegap.ServerBrowser
             AuthToken = authToken;
 
             RequestTimeoutSeconds = requestTimeoutSeconds;
-            PollingBackoffSeconds = pollingBackoffSeconds;
-            MaxConsecutivePollingErrors = maxConsecutivePollingErrors;
-
-            //SaveStateInPlayerPrefs = saveStateInPlayerPrefs;
-            //ClientVersion = clientVersion;
-            //RemoveAssignmentSeconds = removeAssignmentSeconds;
-
-            //PLAYER_PREFS_KEY_VERSION = pLAYER_PREFS_KEY_VERSION;
-            //PLAYER_PREFS_KEY_TICKET = pLAYER_PREFS_KEY_TICKET;
-            //PLAYER_PREFS_KEY_ASSIGNMENT = pLAYER_PREFS_KEY_ASSIGNMENT;
-
-            //LogTicketUpdates = logTicketUpdates;
-            //LogAssignmentUpdates = logAssignmentUpdates;
-            //LogPollingUpdates = logPollingUpdates;
+            HeartbeatIntervalSeconds = heartbeatIntervalSeconds;
+            HeartbeatMaxConsecutiveErrors = heartbeatMaxConsecutiveErrors;
         }
 
         #region Agent API
         public void Status()
         {
-            ServerBrowserApi.GetMonitor(
-                (MonitorDTO monitor, UnityWebRequest request) =>
+            Api.GetMonitor(
+                (MonitorResponseDTO monitor, UnityWebRequest request) =>
                 {
                     if (monitor.Status.ToLower() == "healthy")
                     {
@@ -95,21 +75,126 @@ namespace Edgegap.ServerBrowser
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    L._Error($"Server Browser | Monitor API error.\n{error}");
-                    Monitor._Update(null, "error");
+                    Monitor._Error($"get monitor failed (unexpected error)\n{error}", null);
                 }
             );
         }
 
-        public void RegisterInstance()
+        public void DiscoverInstance(
+            ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata> instance
+        )
         {
-            // @todo
+            Api.CreateServerInstance(
+                instance,
+                (
+                    ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata> response,
+                    UnityWebRequest request
+                ) =>
+                {
+                    Instance._Update(response, "discovered");
+                    Heartbeat();
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    if (request.responseCode == 409)
+                    {
+                        Instance._Error("discovery failed (duplicate)");
+                    }
+                    else
+                    {
+                        Instance._Error($"discovery failed\n{error}");
+                    }
+                }
+            );
+        }
+
+        public void DeleteInstance()
+        {
+            if (Instance.Current is null)
+            {
+                Instance._Update(null, "deleted");
+                return;
+            }
+
+            Api.DeleteServerInstance(
+                Instance.Current.RequestID,
+                (UnityWebRequest request) =>
+                {
+                    Instance._Update(null, "deleted");
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    if (request.responseCode == 404)
+                    {
+                        Instance._Update(null, "delete failed (not found)");
+                    }
+                    else
+                    {
+                        Instance._Error($"delete failed\n{error}", null);
+                    }
+                }
+            );
+        }
+
+        public void UpdateInstance(ServerInstanceMetadata metadata)
+        {
+            // todo implement update instance
+        }
+
+        public void UpdateSlot(string name, int availableSeats, SlotMetadata metadata)
+        {
+            // todo implement update slot
+        }
+
+        public void ConfirmReservations(string playerID, bool greedy = false)
+        {
+            ConfirmReservations(new HashSet<string>() { playerID }, greedy);
+        }
+
+        public void ConfirmReservations(HashSet<string> playerIDs, bool greedy = false)
+        {
+            if (playerIDs.IsSubsetOf(Connections.Current.PendingConfirmations))
+            {
+                Connections._Notify("noop, already confirmed");
+                return;
+            }
+
+            if (!greedy)
+            {
+                Connections._Update(
+                    new ConnectionsDTO()
+                    {
+                        PendingConfirmations = new HashSet<string>(
+                            Connections.Current.PendingConfirmations.Concat(playerIDs)
+                        ),
+                        Confirmations = Connections.Current.Confirmations,
+                    },
+                    "queued confirmations"
+                );
+                return;
+            }
+
+            ConfirmReservations(playerIDs);
         }
         #endregion
 
         #region Initialization
         public void Initialize(
-            UnityAction<Observable<MonitorDTO>, ObservableActionType, string> onMonitorUpdate
+            UnityAction<
+                Observable<MonitorResponseDTO>,
+                ObservableActionType,
+                string
+            > onMonitorUpdate,
+            UnityAction<
+                Observable<ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata>>,
+                ObservableActionType,
+                string
+            > onInstanceUpdate,
+            UnityAction<
+                Observable<ConnectionsDTO>,
+                ObservableActionType,
+                string
+            > onConnectionsUpdate
         )
         {
             if (string.IsNullOrEmpty(BaseUrl.Trim()))
@@ -122,73 +207,31 @@ namespace Edgegap.ServerBrowser
                 throw new Exception("AuthToken not declared.");
             }
 
-            //if (SaveStateInPlayerPrefs)
-            //{
-            //    _LoadStateFromPlayerPrefs();
-            //}
-
-            ServerBrowserApi = new Api<ServerInstanceMetadata>(Handler, AuthToken, BaseUrl);
+            Api = new Api<ServerInstanceMetadata, SlotMetadata>(Handler, AuthToken, BaseUrl);
             Ping = new Edgegap.Ping(Handler);
 
-            _SubscribeLogger(Monitor, "Monitor");
+            SubscribeLogger(Monitor, "Monitor");
             Monitor.Subscribe(onMonitorUpdate);
+
+            SubscribeLogger(Instance, "Instance");
+            Instance.Subscribe(onInstanceUpdate);
+
+            SubscribeLogger(Connections, "Connections");
+            Connections.Subscribe(onConnectionsUpdate);
+
+            if (HeartbeatIntervalSeconds < RequestTimeoutSeconds)
+            {
+                RequestTimeoutSeconds = (int)HeartbeatIntervalSeconds;
+                Monitor._Notify(
+                    "clamped timeout to match update interval",
+                    ObservableActionType.Warn
+                );
+            }
 
             Status();
         }
 
-        //internal void _LoadStateFromPlayerPrefs()
-        //{
-        //    string version = ClientVersion;
-        //    try
-        //    {
-        //        version = PlayerPrefs.GetString(PLAYER_PREFS_KEY_VERSION);
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        L._Error($"Deserializing client version failed: {e.Message}");
-        //    }
-
-        //    // skip reading ticket and assignment if version increased
-        //    if (
-        //        string.IsNullOrEmpty(ClientVersion)
-        //        || (!string.IsNullOrEmpty(version) && version.CompareTo(ClientVersion) > 0)
-        //    )
-        //        return;
-
-        //    try
-        //    {
-        //        string ticket = PlayerPrefs.GetString(PLAYER_PREFS_KEY_TICKET);
-        //        if (!string.IsNullOrEmpty(ticket))
-        //        {
-        //            Ticket._Update(
-        //                JsonConvert.DeserializeObject<T>(ticket),
-        //                "loaded from PlayerPrefs"
-        //            );
-        //        }
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        L._Error($"Deserializing ticket failed, create new ticket.\n{e.Message}");
-        //    }
-
-        //    try
-        //    {
-        //        string assignment = PlayerPrefs.GetString(PLAYER_PREFS_KEY_ASSIGNMENT);
-        //        if (assignment.Length > 0)
-        //        {
-        //            Assignment._Update(
-        //                JsonConvert.DeserializeObject<TicketResponseDTO>(assignment),
-        //                "loaded from PlayerPrefs"
-        //            );
-        //        }
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        L._Error($"Deserializing assignment failed, restart matchmaking.\n{e.Message}");
-        //    }
-        //}
-
-        internal void _SubscribeLogger<O>(
+        internal void SubscribeLogger<O>(
             Observable<O> observable,
             string subject,
             bool enabled = true
@@ -204,7 +247,7 @@ namespace Edgegap.ServerBrowser
                     {
                         L._Log(
                             L._FormatUpdateMessage(
-                                "Matchmaking",
+                                "Server Browser",
                                 subject,
                                 message,
                                 obs.Previous,
@@ -212,10 +255,16 @@ namespace Edgegap.ServerBrowser
                             )
                         );
                     }
+                    else if (type == ObservableActionType.Error)
+                    {
+                        L._Error(
+                            L._FormatErrorMessage("Server Browser", subject, message, obs.Current)
+                        );
+                    }
                     else
                     {
                         string log = L._FormatNotifyMessage(
-                            "Matchmaking",
+                            "Server Browser",
                             subject,
                             message,
                             obs.Current
@@ -224,18 +273,97 @@ namespace Edgegap.ServerBrowser
                         {
                             L._Log(log);
                         }
-                        else if (type == ObservableActionType.Warn)
-                        {
-                            L._Warn(log);
-                        }
                         else
                         {
-                            L._Error(log);
+                            L._Warn(log);
                         }
                     }
                 }
             );
         }
         #endregion
+
+        #region Internals
+
+        internal void Heartbeat(int consecutiveErrors = 0)
+        {
+            if (consecutiveErrors > HeartbeatMaxConsecutiveErrors)
+            {
+                DeleteInstance();
+                return;
+            }
+            else if (Instance.Current is null)
+            {
+                return;
+            }
+
+            Api.KeepAliveServerInstance(
+                Instance.Current.RequestID,
+                (KeepAliveResponseDTO keepalive, UnityWebRequest request) =>
+                {
+                    Handler.StartCoroutine(DelayedHeartbeat());
+                    ConfirmReservations();
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    if (request.responseCode == 404)
+                    {
+                        DiscoverInstance(Instance.Current);
+                    }
+                    else
+                    {
+                        Handler.StartCoroutine(DelayedHeartbeat(consecutiveErrors + 1));
+                    }
+                }
+            );
+        }
+
+        internal IEnumerator DelayedHeartbeat(int consecutiveErrors = 0)
+        {
+            yield return new WaitForSeconds(HeartbeatIntervalSeconds + (0.1f * Random.value));
+            Heartbeat(consecutiveErrors);
+        }
+
+        internal void ConfirmReservations(HashSet<string> playerIDs = null)
+        {
+            playerIDs ??= Connections.Current.PendingConfirmations;
+
+            if (playerIDs.Count == 0)
+            {
+                Connections._Notify("noop, no pending confirmations");
+                return;
+            }
+
+            Api.ConfirmReservations(
+                Instance.Current.RequestID,
+                playerIDs.ToList(),
+                (ConfirmReservationsResponseDTO response, UnityWebRequest request) =>
+                {
+                    Connections._Update(
+                        new ConnectionsDTO()
+                        {
+                            PendingConfirmations = new HashSet<string>(
+                                Connections.Current.PendingConfirmations.Except(playerIDs)
+                            ),
+                            Confirmations = response,
+                        },
+                        "confirmed reservations"
+                    );
+
+                    // todo update slots capacity accordingly
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    Connections._Error($"confirmation failed\n{error}");
+                }
+            );
+        }
+        #endregion
+    }
+
+    public enum InstanceUpdateMode
+    {
+        OnHeartbeat,
+        Greedy,
     }
 }
