@@ -23,7 +23,10 @@ This plugin is intended to simplify integration of Matchmaking through pre-defin
 1. Open your Unity project,
 2. Select toolbar option **Window** -> **Package Manager**,
 3. Click the **+** icon and select **Add package from git URL...**,
-4. Input the following URL `https://github.com/edgegap/edgegap-unity-matchmaking-sdk.git`,
+4. Input the following URL:
+```
+https://github.com/edgegap/edgegap-unity-matchmaking-sdk.git
+```
 5. Click **Add** and wait for the Unity Package Manager to complete the installation.
 
 ## Install via ZIP archive
@@ -41,7 +44,10 @@ This plugin is intended to simplify integration of Matchmaking through pre-defin
 
 1. Select toolbar option **Window** -> **Package Manager**,
 2. Click the **+** icon and select **Add package by name...**,
-3. Input the name `com.unity.nuget.newtonsoft-json` and wait for the Unity Package Manager to complete the installation.,
+3. Input this name and wait for the Unity Package Manager to complete the installation:
+```
+com.unity.nuget.newtonsoft-json
+```
 4. Back to this github project - make sure you're on the `main` branch,
 5. Click **<> Code**, then **Download ZIP**,
 6. Paste the contents of the unzipped archive in your `Assets` folder within Unity project root.
