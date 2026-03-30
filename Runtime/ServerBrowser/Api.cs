@@ -9,8 +9,8 @@ namespace Edgegap.ServerBrowser
     using L = Logger;
 
     public class Api<ServerInstanceMetadata, SlotMetadata>
-        where ServerInstanceMetadata : MetadataDTO
-        where SlotMetadata : MetadataDTO
+        where ServerInstanceMetadata : MetadataDTO, new()
+        where SlotMetadata : MetadataDTO, new()
     {
         internal SafeHttpRequest Request;
         internal string AuthToken;
@@ -168,6 +168,38 @@ namespace Edgegap.ServerBrowser
                 },
                 onErrorDelegate,
                 3
+            );
+        }
+
+        public void UpdateSlot(
+            string requestID,
+            SlotUpdateDTO<SlotMetadata> update,
+            Action<SlotDTO<SlotMetadata>, UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate
+        )
+        {
+            Request.Patch(
+                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}/slots/{update.Name}",
+                AuthToken,
+                JsonConvert.SerializeObject(update),
+                (string response, UnityWebRequest request) =>
+                {
+                    try
+                    {
+                        SlotDTO<SlotMetadata> slot = JsonConvert.DeserializeObject<
+                            SlotDTO<SlotMetadata>
+                        >(response);
+                        onSuccessDelegate(slot, request);
+                    }
+                    catch (Exception e)
+                    {
+                        L._Error(
+                            $"Server Browser | Couldn't parse slot update response, update Edgegap SDK.\n{e.Message}"
+                        );
+                        throw;
+                    }
+                },
+                onErrorDelegate
             );
         }
     }

@@ -21,7 +21,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
 
     [Header("Lifecycle")]
     [EnumButtons]
-    public InstanceUpdateMode InstanceUpdateMode = InstanceUpdateMode.OnHeartbeat;
+    public UpdateMode UpdateMode = UpdateMode.Heartbeat;
 
     [Header("Heartbeat")]
     public int RequestTimeoutSeconds = 10;
@@ -152,7 +152,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
                 }
             },
             (
-                Observable<ConnectionsDTO> connections,
+                Observable<ConnectionsDTO<MySlotMetadata>> connections,
                 ObservableActionType action,
                 string message
             ) => {
@@ -165,14 +165,30 @@ public class ServerBrowserServerHandler : MonoBehaviour
         );
     }
 
-    public void OnPlayerJoined(string playerId)
+    public void OnPlayerJoined(string playerID)
     {
-        ServerAgent.ConfirmReservations(playerId, InstanceUpdateMode == InstanceUpdateMode.Greedy);
+        ServerAgent.ConfirmReservations(new HashSet<string>() { playerID }, UpdateMode);
     }
 
-    public void OnPlayerAbandoned()
+    public void OnPlayerAbandoned(string slotName)
     {
-        // todo implement update slot to increase capacity
+        SlotDTO<MySlotMetadata> slot = ServerAgent.Instance.Current.Slots.Find(slot =>
+            slot.Name == slotName
+        );
+        if (slot is null)
+        {
+            L._Error($"Server Browser Server Handler | Slot '{slotName}' not found.");
+            return;
+        }
+
+        ServerAgent.UpdateSlot(
+            new SlotUpdateDTO<MySlotMetadata>(
+                slotName,
+                slot.AvailableSeats + 1,
+                new MySlotMetadata() { }
+            ),
+            UpdateMode
+        );
     }
 
     public void OnApplicationQuit()

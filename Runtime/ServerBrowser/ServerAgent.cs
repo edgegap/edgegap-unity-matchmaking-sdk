@@ -12,8 +12,8 @@ namespace Edgegap.ServerBrowser
     using L = Logger;
 
     public class ServerAgent<ServerInstanceMetadata, SlotMetadata>
-        where ServerInstanceMetadata : MetadataDTO
-        where SlotMetadata : MetadataDTO
+        where ServerInstanceMetadata : MetadataDTO, new()
+        where SlotMetadata : MetadataDTO, new()
     {
         private Api<ServerInstanceMetadata, SlotMetadata> Api;
         private Edgegap.Ping Ping;
@@ -36,8 +36,8 @@ namespace Edgegap.ServerBrowser
             private set;
         } = new Observable<ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata>>() { };
 
-        public Observable<ConnectionsDTO> Connections { get; private set; } =
-            new Observable<ConnectionsDTO>() { };
+        public Observable<ConnectionsDTO<SlotMetadata>> Connections { get; private set; } =
+            new Observable<ConnectionsDTO<SlotMetadata>>() { };
 
         public ServerAgent(
             MonoBehaviour handler,
@@ -136,45 +136,85 @@ namespace Edgegap.ServerBrowser
             );
         }
 
+        public void UpdateSlot(
+            SlotUpdateDTO<SlotMetadata> update,
+            UpdateMode mode = UpdateMode.Heartbeat
+        )
+        {
+            SlotDTO<SlotMetadata> slot = Instance.Current.Slots.Find(slot =>
+                slot.Name == update.Name
+            );
+            if (slot is null)
+            {
+                Connections._Error($"update failed (slot not found)\n{update.Name}");
+                return;
+            }
+
+            if (mode == UpdateMode.Heartbeat)
+            {
+                bool foundPendingUpdate = Connections.Current.PendingUpdates.TryGetValue(
+                    update.Name,
+                    out SlotUpdateDTO<SlotMetadata> pendingUpdate
+                );
+                // todo queue updates by timestamp, don't merge yet
+                if (!foundPendingUpdate)
+                {
+                    Connections.Current.PendingUpdates.Add(update.Name, update);
+                }
+                else
+                {
+                    Connections.Current.PendingUpdates[update.Name] =
+                        new SlotUpdateDTO<SlotMetadata>(
+                            update.Name,
+                            update.AvailableSeats,
+                            pendingUpdate.Metadata.Merge(update.Metadata)
+                        );
+                }
+            }
+            else
+            {
+                FlushSlotUpdates(
+                    new Dictionary<string, SlotUpdateDTO<SlotMetadata>>()
+                    {
+                        { update.Name, update },
+                    }
+                );
+            }
+            // todo finish implementation
+        }
+
         public void UpdateInstance(ServerInstanceMetadata metadata)
         {
             // todo implement update instance
         }
 
-        public void UpdateSlot(string name, int availableSeats, SlotMetadata metadata)
+        public void ConfirmReservations(
+            HashSet<string> pending,
+            UpdateMode mode = UpdateMode.Heartbeat
+        )
         {
-            // todo implement update slot
-        }
-
-        public void ConfirmReservations(string playerID, bool greedy = false)
-        {
-            ConfirmReservations(new HashSet<string>() { playerID }, greedy);
-        }
-
-        public void ConfirmReservations(HashSet<string> playerIDs, bool greedy = false)
-        {
-            if (playerIDs.IsSubsetOf(Connections.Current.PendingConfirmations))
+            if (pending.IsSubsetOf(Connections.Current.PendingConfirmations))
             {
                 Connections._Notify("noop, already confirmed");
                 return;
             }
-
-            if (!greedy)
+            if (mode == UpdateMode.Heartbeat)
             {
                 Connections._Update(
-                    new ConnectionsDTO()
+                    new ConnectionsDTO<SlotMetadata>()
                     {
                         PendingConfirmations = new HashSet<string>(
-                            Connections.Current.PendingConfirmations.Concat(playerIDs)
+                            Connections.Current.PendingConfirmations.Concat(pending)
                         ),
                         Confirmations = Connections.Current.Confirmations,
                     },
                     "queued confirmations"
                 );
-                return;
             }
-
-            ConfirmReservations(playerIDs);
+            else
+            {
+                FlushConfirmations(pending);
+            }
         }
         #endregion
 
@@ -191,7 +231,7 @@ namespace Edgegap.ServerBrowser
                 string
             > onInstanceUpdate,
             UnityAction<
-                Observable<ConnectionsDTO>,
+                Observable<ConnectionsDTO<SlotMetadata>>,
                 ObservableActionType,
                 string
             > onConnectionsUpdate
@@ -302,7 +342,7 @@ namespace Edgegap.ServerBrowser
                 (KeepAliveResponseDTO keepalive, UnityWebRequest request) =>
                 {
                     Handler.StartCoroutine(DelayedHeartbeat());
-                    ConfirmReservations();
+                    FlushConfirmations();
                 },
                 (string error, UnityWebRequest request) =>
                 {
@@ -324,11 +364,11 @@ namespace Edgegap.ServerBrowser
             Heartbeat(consecutiveErrors);
         }
 
-        internal void ConfirmReservations(HashSet<string> playerIDs = null)
+        internal void FlushConfirmations(HashSet<string> pending = null)
         {
-            playerIDs ??= Connections.Current.PendingConfirmations;
+            pending ??= Connections.Current.PendingConfirmations;
 
-            if (playerIDs.Count == 0)
+            if (pending.Count == 0)
             {
                 Connections._Notify("noop, no pending confirmations");
                 return;
@@ -336,14 +376,14 @@ namespace Edgegap.ServerBrowser
 
             Api.ConfirmReservations(
                 Instance.Current.RequestID,
-                playerIDs.ToList(),
+                pending.ToList(),
                 (ConfirmReservationsResponseDTO response, UnityWebRequest request) =>
                 {
                     Connections._Update(
-                        new ConnectionsDTO()
+                        new ConnectionsDTO<SlotMetadata>()
                         {
                             PendingConfirmations = new HashSet<string>(
-                                Connections.Current.PendingConfirmations.Except(playerIDs)
+                                Connections.Current.PendingConfirmations.Except(pending)
                             ),
                             Confirmations = response,
                         },
@@ -358,12 +398,33 @@ namespace Edgegap.ServerBrowser
                 }
             );
         }
+
+        internal void FlushSlotUpdates(Dictionary<string, SlotUpdateDTO<SlotMetadata>> updates)
+        {
+            // todo semaphore PER SLOT to prevent concurrent updates
+            foreach (var update in updates)
+            {
+                // todo merge updates into a single update per slot
+                Api.UpdateSlot(
+                    Instance.Current.RequestID,
+                    update.Value,
+                    (SlotDTO<SlotMetadata> slot, UnityWebRequest request) => {
+                        // todo remove update from pending updates
+                        // todo update slot in instance
+                    },
+                    (string error, UnityWebRequest request) =>
+                    {
+                        Connections._Error($"slot update failed\n{error}");
+                    }
+                );
+            }
+        }
         #endregion
     }
 
-    public enum InstanceUpdateMode
+    public enum UpdateMode
     {
-        OnHeartbeat,
+        Heartbeat,
         Greedy,
     }
 }

@@ -1,17 +1,34 @@
+using System.Reflection;
 using Newtonsoft.Json;
 
 namespace Edgegap.ServerBrowser
 {
-    public abstract class MetadataDTO
+    public class MetadataDTO
     {
-        public MetadataDTO Clone()
+        public static JsonSerializerSettings SerializationSettings = new JsonSerializerSettings()
         {
-            return JsonConvert.DeserializeObject<MetadataDTO>(JsonConvert.SerializeObject(this));
+            NullValueHandling = NullValueHandling.Ignore,
+        };
+
+        public T Merge<T>(T other)
+            where T : MetadataDTO, new()
+        {
+            T result = new T();
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public;
+
+            foreach (var prop in typeof(T).GetProperties(flags))
+            {
+                if (!prop.CanRead || !prop.CanWrite || prop.GetIndexParameters().Length > 0)
+                    continue;
+                prop.SetValue(result, prop.GetValue(other) ?? prop.GetValue(this));
+            }
+
+            return result;
         }
 
         public override string ToString()
         {
-            return JsonConvert.SerializeObject(this);
+            return JsonConvert.SerializeObject(this, SerializationSettings);
         }
     }
 

@@ -5,8 +5,8 @@ using Newtonsoft.Json;
 namespace Edgegap.ServerBrowser
 {
     public class ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata>
-        where ServerInstanceMetadata : MetadataDTO
-        where SlotMetadata : MetadataDTO
+        where ServerInstanceMetadata : MetadataDTO, new()
+        where SlotMetadata : MetadataDTO, new()
     {
         [JsonProperty("request_id")]
         public string RequestID;

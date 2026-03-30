@@ -163,6 +163,50 @@ namespace Edgegap
             );
         }
 
+        public void Patch(
+            string url,
+            string authToken,
+            string body,
+            Action<string, UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate,
+            int requestAttemptsLeft = 3
+        )
+        {
+            UnityWebRequest request = UnityWebRequest.Put(url, body);
+            request.method = "PATCH";
+            request.SetRequestHeader("Authorization", authToken);
+            request.SetRequestHeader("Content-Type", "application/json");
+            request.timeout = TimeoutSeconds;
+            Parent.StartCoroutine(
+                _SendRequestEnumerator(
+                    request,
+                    onSuccessDelegate,
+                    (string error, UnityWebRequest req) =>
+                    {
+                        if (
+                            requestAttemptsLeft > 0
+                            && (req.responseCode == 429 || req.responseCode >= 500)
+                        )
+                        {
+                            L._Warn($"Retrying ({requestAttemptsLeft} left) PATCH {url}.\n{error}");
+                            Delete(
+                                url,
+                                authToken,
+                                onSuccessDelegate,
+                                onErrorDelegate,
+                                requestAttemptsLeft - 1
+                            );
+                        }
+                        else
+                        {
+                            onErrorDelegate(error, req);
+                        }
+                    },
+                    requestAttemptsLeft > 0
+                )
+            );
+        }
+
         public IEnumerator _SendRequestEnumerator(
             UnityWebRequest request,
             Action<string, UnityWebRequest> onSuccessDelegate,
