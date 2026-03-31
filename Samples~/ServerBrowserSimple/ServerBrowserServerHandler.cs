@@ -20,6 +20,8 @@ public class ServerBrowserServerHandler : MonoBehaviour
     public string ServerToken;
 
     [Header("Lifecycle")]
+    public bool AcceptExpiredReservations = false;
+
     [EnumButtons]
     public UpdateMode UpdateMode = UpdateMode.Heartbeat;
 
@@ -85,6 +87,8 @@ public class ServerBrowserServerHandler : MonoBehaviour
             this,
             BaseUrl,
             ServerToken,
+            AcceptExpiredReservations,
+            UpdateMode,
             RequestTimeoutSeconds,
             HeartbeatIntervalSeconds,
             HeartbeatMaxConsecutiveErrors
@@ -149,10 +153,16 @@ public class ServerBrowserServerHandler : MonoBehaviour
                     {
                         SelfStopDeployment();
                     }
+
+                    // todo delete testing code
+                    if (message.Contains("discovered"))
+                    {
+                        StartCoroutine(RunTests());
+                    }
                 }
             },
             (
-                Observable<ConnectionsDTO<MySlotMetadata>> connections,
+                Observable<ConfirmReservationsResponseDTO> confirmations,
                 ObservableActionType action,
                 string message
             ) => {
@@ -165,29 +175,39 @@ public class ServerBrowserServerHandler : MonoBehaviour
         );
     }
 
+    public IEnumerator RunTests()
+    {
+        Debug.Log("Running tests");
+        yield return new WaitForSeconds(5f);
+        OnPlayerJoined("test");
+        OnPlayerJoined("test-unknown");
+        // ServerAgent.UpdateSlot(new SlotUpdateDTO<MySlotMetadata>("main", -15));
+        yield return new WaitForSeconds(60f);
+        OnPlayerJoined("test-expired");
+        OnPlayerAbandoned("main");
+        OnPlayerAbandoned("main");
+        OnPlayerAbandoned("main");
+    }
+
+    public void Update()
+    {
+        ServerAgent.UpdateMode = UpdateMode;
+        ServerAgent.AcceptExpiredReservations = AcceptExpiredReservations;
+    }
+
     public void OnPlayerJoined(string playerID)
     {
-        ServerAgent.ConfirmReservations(new HashSet<string>() { playerID }, UpdateMode);
+        ServerAgent.ConfirmReservation(playerID);
     }
 
     public void OnPlayerAbandoned(string slotName)
     {
-        SlotDTO<MySlotMetadata> slot = ServerAgent.Instance.Current.Slots.Find(slot =>
-            slot.Name == slotName
-        );
-        if (slot is null)
-        {
-            L._Error($"Server Browser Server Handler | Slot '{slotName}' not found.");
-            return;
-        }
-
         ServerAgent.UpdateSlot(
             new SlotUpdateDTO<MySlotMetadata>(
                 slotName,
-                slot.AvailableSeats + 1,
-                new MySlotMetadata() { }
-            ),
-            UpdateMode
+                1,
+                ServerAgent.Instance.Current.Slots.Find(s => s.Name == slotName).Metadata
+            )
         );
     }
 

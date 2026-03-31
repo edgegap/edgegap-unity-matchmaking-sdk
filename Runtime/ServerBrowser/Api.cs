@@ -18,6 +18,8 @@ namespace Edgegap.ServerBrowser
 
         internal string PATH_MONITOR = "monitor";
         internal string PATH_SERVER_INSTANCES = "server-instances";
+        internal string PATH_SLOTS = "slots";
+        internal string PATH_RESERVATIONS = "reservations";
 
         public Api(MonoBehaviour parent, string authToken, string baseUrl)
         {
@@ -123,9 +125,9 @@ namespace Edgegap.ServerBrowser
                 {
                     try
                     {
-                        KeepAliveResponseDTO keepalive =
+                        KeepAliveResponseDTO keepAlive =
                             JsonConvert.DeserializeObject<KeepAliveResponseDTO>(response);
-                        onSuccessDelegate(keepalive, request);
+                        onSuccessDelegate(keepAlive, request);
                     }
                     catch (Exception e)
                     {
@@ -141,13 +143,13 @@ namespace Edgegap.ServerBrowser
 
         public void ConfirmReservations(
             string requestID,
-            List<string> userIDs,
+            ConfirmReservationsDTO userIDs,
             Action<ConfirmReservationsResponseDTO, UnityWebRequest> onSuccessDelegate,
             Action<string, UnityWebRequest> onErrorDelegate
         )
         {
             Request.Post(
-                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}:confirm",
+                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}/{PATH_RESERVATIONS}:confirm",
                 AuthToken,
                 JsonConvert.SerializeObject(userIDs),
                 (string response, UnityWebRequest request) =>
@@ -178,8 +180,9 @@ namespace Edgegap.ServerBrowser
             Action<string, UnityWebRequest> onErrorDelegate
         )
         {
+            Debug.Log($"wip update slot {update.Name}: {update}");
             Request.Patch(
-                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}/slots/{update.Name}",
+                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}/{PATH_SLOTS}/{update.Name}",
                 AuthToken,
                 JsonConvert.SerializeObject(update),
                 (string response, UnityWebRequest request) =>
@@ -199,7 +202,8 @@ namespace Edgegap.ServerBrowser
                         throw;
                     }
                 },
-                onErrorDelegate
+                onErrorDelegate,
+                3
             );
         }
     }

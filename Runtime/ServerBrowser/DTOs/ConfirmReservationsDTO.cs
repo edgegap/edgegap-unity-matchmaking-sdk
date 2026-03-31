@@ -3,10 +3,21 @@ using Newtonsoft.Json;
 
 namespace Edgegap
 {
+    public class ConfirmReservationsDTO
+    {
+        [JsonProperty("user_ids")]
+        public List<string> UserIDs;
+
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
+        }
+    }
+
     public class ConfirmReservationsResponseDTO
     {
-        [JsonProperty("unknown_ids")]
-        public string[] UnknownIDs;
+        [JsonProperty("unknown_user_ids")]
+        public List<string> UnknownIDs;
 
         [JsonProperty("slots")]
         public List<SlotConfirmations> Slots;

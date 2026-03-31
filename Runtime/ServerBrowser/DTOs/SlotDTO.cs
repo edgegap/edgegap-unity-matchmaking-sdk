@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace Edgegap.ServerBrowser
 {
-    public class SlotDTO<SlotMetadata>
+    public abstract class SlotBase<SlotMetadata>
         where SlotMetadata : MetadataDTO, new()
     {
         [JsonProperty("name")]
@@ -14,7 +14,11 @@ namespace Edgegap.ServerBrowser
 
         [JsonProperty("available_seats")]
         public uint AvailableSeats;
+    }
 
+    public class SlotDTO<SlotMetadata> : SlotBase<SlotMetadata>
+        where SlotMetadata : MetadataDTO, new()
+    {
         [JsonProperty("reserved_seats")]
         public uint ReservedSeats;
 
@@ -34,7 +38,7 @@ namespace Edgegap.ServerBrowser
             {
                 Name = Name,
                 Metadata = Metadata.Merge(update.Metadata),
-                AvailableSeats = update.AvailableSeats,
+                AvailableSeats = (uint)(AvailableSeats + update.AvailableSeats),
                 ReservedSeats = ReservedSeats,
                 JoinableSeats = JoinableSeats,
             };
@@ -46,22 +50,30 @@ namespace Edgegap.ServerBrowser
         }
     }
 
-    public class SlotUpdateDTO<SlotMetadata> : SlotDTO<SlotMetadata>
+    public class SlotUpdateDTO<SlotMetadata> : SlotBase<SlotMetadata>
         where SlotMetadata : MetadataDTO, new()
     {
-        private new string Name;
+        public static JsonSerializerSettings SerializationSettings = new JsonSerializerSettings()
+        {
+            NullValueHandling = NullValueHandling.Ignore,
+        };
 
         [JsonIgnore]
-        private new uint ReservedSeats;
+        public new string Name;
 
-        [JsonIgnore]
-        private new uint JoinableSeats;
+        [JsonProperty("available_seats")]
+        public new int AvailableSeats;
 
-        public SlotUpdateDTO(string name, uint availableSeats, SlotMetadata metadata = null)
+        public SlotUpdateDTO(string name, int availableSeats, SlotMetadata metadata = null)
         {
             Name = name;
             AvailableSeats = availableSeats;
-            Metadata = metadata;
+            Metadata = metadata ?? new SlotMetadata();
+        }
+
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this, SerializationSettings);
         }
     }
 }
