@@ -186,6 +186,7 @@ namespace Edgegap.Matchmaking
             });
         }
 
+        [Obsolete("Managing group tickets in clients is deprecated, please use Group Up flow instead.")]
         public void StartGroupMatchmaking(
             T hostTicket,
             List<T> memberTickets,
@@ -224,6 +225,7 @@ namespace Edgegap.Matchmaking
             });
         }
 
+        [Obsolete("Managing group tickets in clients is deprecated, please use Group Up flow instead.")]
         public void JoinGroupMatchmaking(TicketResponseDTO assignment, bool abandon = false)
         {
             if (Assignment.Current is not null && !abandon)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -22,6 +23,7 @@ namespace Edgegap.Matchmaking
         internal string PATH_BEACONS = "locations/beacons";
         internal string PATH_TICKETS = "tickets";
         internal string PATH_GROUP_TICKETS = "group-tickets";
+        internal string PATH_GROUP_UP = "groups";
 
         public Api(
             MonoBehaviour parent,
@@ -208,6 +210,186 @@ namespace Edgegap.Matchmaking
             );
         }
 
+        public void CreateGroupAsync(
+            T group,
+            Action<GroupUpResponseDTO, UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate
+        )
+        {
+            Post(
+                $"{BaseUrl}/{PATH_GROUP_UP}",
+                JsonConvert.SerializeObject(group),
+                (string response, UnityWebRequest request) =>
+                {
+                    try
+                    {
+                        GroupUpResponseDTO assignment =
+                            JsonConvert.DeserializeObject<GroupUpResponseDTO>(response);
+                        onSuccessDelegate(assignment, request);
+                    }
+                    catch (Exception e)
+                    {
+                        L._Error(
+                            $"Couldn't parse assignment, consider updating Matchmaking SDK. {e.Message}"
+                        );
+                        throw;
+                    }
+                },
+                onErrorDelegate
+            );
+        }
+
+        public void GetGroupAsync(
+            string groupID,
+            Action<GroupDetailResponse, UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate
+        )
+        {
+            Get(
+                $"{BaseUrl}/{PATH_GROUP_UP}/{groupID}",
+                (string response, UnityWebRequest request) =>
+                {
+                    try
+                    {
+                        GroupDetailResponse details =
+                            JsonConvert.DeserializeObject<GroupDetailResponse>(response);
+                        onSuccessDelegate(details, request);
+                    }
+                    catch (Exception e)
+                    {
+                        L._Error(
+                            $"Couldn't parse details, consider updating Matchmaking SDK. {e.Message}"
+                        );
+                        throw;
+                    }
+                },
+                onErrorDelegate
+            );
+        }   
+
+        public void DeleteGroupAsync(
+            string groupID,
+            Action<UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate
+        )
+        {
+            Delete(
+                $"{BaseUrl}/{PATH_GROUP_UP}/{groupID}",
+                (string response, UnityWebRequest request) =>
+                {
+                    onSuccessDelegate(request);
+                },
+                onErrorDelegate
+            );
+        }
+
+        public void CreateGroupMemberAsync(
+            T member,
+            string groupID,
+            Action<GroupUpResponseDTO, UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate
+        )
+        {
+            Post(
+                $"{BaseUrl}/{PATH_GROUP_UP}/{groupID}",
+                JsonConvert.SerializeObject(member),
+                (string response, UnityWebRequest request) =>
+                {
+                    try
+                    {
+                        GroupUpResponseDTO assignment =
+                            JsonConvert.DeserializeObject<GroupUpResponseDTO>(response);
+                        onSuccessDelegate(assignment, request);
+                    }
+                    catch (Exception e)
+                    {
+                        L._Error(
+                            $"Couldn't parse assignment, consider updating Matchmaking SDK. {e.Message}"
+                        );
+                        throw;
+                    }
+                },
+                onErrorDelegate
+            );
+        }
+
+        public void GetGroupMemberDetailsAsync(
+            string groupID,
+            string memberID,
+            Action<GroupUpResponseDTO, UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate
+        )
+        {
+            Get(
+                $"{BaseUrl}/{PATH_GROUP_UP}/{groupID}/members/{memberID}",
+                (string response, UnityWebRequest request) =>
+                {
+                    try
+                    {
+                        GroupUpResponseDTO details =
+                            JsonConvert.DeserializeObject<GroupUpResponseDTO>(response);
+                        onSuccessDelegate(details, request);
+                    }
+                    catch (Exception e)
+                    {
+                        L._Error(
+                            $"Couldn't parse details, consider updating Matchmaking SDK. {e.Message}"
+                        );
+                        throw;
+                    }
+                },
+                onErrorDelegate
+            );
+        }  
+
+        public void UpdateGroupMemberAsync(
+            string groupID,
+            string memberID,
+            bool isReady,
+            Action<GroupUpResponseDTO, UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate
+        )
+        {
+            Patch(
+                $"{BaseUrl}/{PATH_GROUP_UP}/{groupID}/members/{memberID}",
+                JsonConvert.SerializeObject(new KeyValuePair<string, bool>("is_ready", isReady)),
+                (string response, UnityWebRequest request) =>
+                {
+                    try
+                    {
+                        GroupUpResponseDTO assignment =
+                            JsonConvert.DeserializeObject<GroupUpResponseDTO>(response);
+                        onSuccessDelegate(assignment, request);
+                    }
+                    catch (Exception e)
+                    {
+                        L._Error(
+                            $"Couldn't parse assignment, consider updating Matchmaking SDK. {e.Message}"
+                        );
+                        throw;
+                    }
+                },
+                onErrorDelegate
+            );
+        }
+
+        public void DeleteGroupMemberAsync(
+            string groupID,
+            string memberID,
+            Action<UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate
+        )
+        {
+            Delete(
+                $"{BaseUrl}/{PATH_GROUP_UP}/{groupID}/members/{memberID}",
+                (string response, UnityWebRequest request) =>
+                {
+                    onSuccessDelegate(request);
+                },
+                onErrorDelegate
+            );
+        }
+
         #region WebGL-friendly WebRequest
         internal void Post(
             string Url,
@@ -239,6 +421,50 @@ namespace Edgegap.Matchmaking
                         {
                             L._Warn($"{error}, retries left: {requestAttemptsLeft}");
                             Post(
+                                Url,
+                                requestBody,
+                                onSuccessDelegate,
+                                onErrorDelegate,
+                                requestAttemptsLeft - 1
+                            );
+                        }
+                        else
+                        {
+                            onErrorDelegate(error, req);
+                        }
+                    },
+                    requestAttemptsLeft > 0
+                )
+            );
+        }
+
+        internal void Patch(
+            string Url,
+            string requestBody,
+            Action<string, UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate,
+            int requestAttemptsLeft = 3
+        )
+        {
+            UnityWebRequest request = UnityWebRequest.Put(Url, requestBody);
+            request.method = "PATCH";
+            request.SetRequestHeader("Authorization", AuthToken);
+            request.SetRequestHeader("Content-Type", "application/json");
+            request.timeout = RequestTimeoutSeconds;
+
+            Parent.StartCoroutine(
+                _SendRequestEnumerator(
+                    request,
+                    onSuccessDelegate,
+                    (string error, UnityWebRequest req) =>
+                    {
+                        if (
+                            requestAttemptsLeft > 0
+                            && (req.responseCode == 429 || req.responseCode >= 500)
+                        )
+                        {
+                            L._Warn($"{error}, retries left: {requestAttemptsLeft}");
+                            Patch(
                                 Url,
                                 requestBody,
                                 onSuccessDelegate,
