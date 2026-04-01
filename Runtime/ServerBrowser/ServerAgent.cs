@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
@@ -372,18 +371,19 @@ namespace Edgegap.ServerBrowser
                     Confirmations._Update(response, "reservations confirmed");
                     response.Slots.ForEach(slot =>
                     {
-                        int assignedSeats =
-                            -1
-                            * (
-                                AcceptExpiredReservations
-                                    ? slot.AcceptedUserIDs.Count + slot.ExpiredUserIDs.Count
-                                    : slot.AcceptedUserIDs.Count
-                            );
-                        PendingUpdates.Enqueue(
-                            new SlotUpdateDTO<SlotMetadata>(slot.Name, assignedSeats)
+                        int allocatedSeats = (
+                            AcceptExpiredReservations
+                                ? slot.AcceptedUserIDs.Count + slot.ExpiredUserIDs.Count
+                                : slot.AcceptedUserIDs.Count
                         );
+                        if (allocatedSeats > 0)
+                        {
+                            PendingUpdates.Enqueue(
+                                new SlotUpdateDTO<SlotMetadata>(slot.Name, allocatedSeats * -1)
+                            );
+                            Instance._Notify("slot update enqueued");
+                        }
                     });
-                    Instance._Notify("slot updates enqueued");
                     FlushSlotUpdates();
                 },
                 (string error, UnityWebRequest request) =>
@@ -395,6 +395,15 @@ namespace Edgegap.ServerBrowser
 
         internal void FlushSlotUpdates()
         {
+            if (FlushingSlotUpdates)
+            {
+                Instance._Notify(
+                    "client throttled concurrent slot update",
+                    ObservableActionType.Warn
+                );
+                return;
+            }
+
             FlushingSlotUpdates = true;
             Dictionary<string, SlotUpdateDTO<SlotMetadata>> mergedUpdates =
                 new Dictionary<string, SlotUpdateDTO<SlotMetadata>>();
@@ -403,22 +412,20 @@ namespace Edgegap.ServerBrowser
             {
                 if (!mergedUpdates.ContainsKey(update.Name))
                 {
-                    mergedUpdates[update.Name] = new SlotUpdateDTO<SlotMetadata>(
-                        update.Name,
-                        update.AvailableSeats
-                            + (int)
-                                Instance
-                                    .Current.Slots.Find(s => s.Name == update.Name)
-                                    .AvailableSeats,
-                        update.Metadata
+                    SlotDTO<SlotMetadata> slot = Instance.Current.Slots.Find(s =>
+                        s.Name == update.Name
                     );
-                    continue;
-                }
 
+                    mergedUpdates[update.Name] = new SlotUpdateDTO<SlotMetadata>(
+                        slot.Name,
+                        (int)slot.AvailableSeats,
+                        slot.Metadata
+                    );
+                }
                 mergedUpdates[update.Name] = new SlotUpdateDTO<SlotMetadata>(
                     update.Name,
                     mergedUpdates[update.Name].AvailableSeats + update.AvailableSeats,
-                    mergedUpdates[update.Name].Metadata.Merge(update.Metadata)
+                    mergedUpdates[update.Name]?.Metadata?.Merge(update.Metadata)
                 );
             }
 

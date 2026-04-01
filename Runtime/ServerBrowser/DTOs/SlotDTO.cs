@@ -68,7 +68,7 @@ namespace Edgegap.ServerBrowser
         {
             Name = name;
             AvailableSeats = availableSeats;
-            Metadata = metadata ?? new SlotMetadata();
+            Metadata = metadata;
         }
 
         public override string ToString()

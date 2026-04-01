@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -69,7 +68,7 @@ namespace Edgegap.ServerBrowser
             Request.Post(
                 $"{BaseUrl}/{PATH_SERVER_INSTANCES}",
                 AuthToken,
-                JsonConvert.SerializeObject(serverInstance),
+                serverInstance.ToString(),
                 (string response, UnityWebRequest request) =>
                 {
                     try
@@ -151,7 +150,7 @@ namespace Edgegap.ServerBrowser
             Request.Post(
                 $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}/{PATH_RESERVATIONS}:confirm",
                 AuthToken,
-                JsonConvert.SerializeObject(userIDs),
+                userIDs.ToString(),
                 (string response, UnityWebRequest request) =>
                 {
                     try
@@ -180,11 +179,10 @@ namespace Edgegap.ServerBrowser
             Action<string, UnityWebRequest> onErrorDelegate
         )
         {
-            Debug.Log($"wip update slot {update.Name}: {update}");
             Request.Patch(
                 $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}/{PATH_SLOTS}/{update.Name}",
                 AuthToken,
-                JsonConvert.SerializeObject(update),
+                update.ToString(),
                 (string response, UnityWebRequest request) =>
                 {
                     try
