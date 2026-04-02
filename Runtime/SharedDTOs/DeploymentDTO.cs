@@ -1,48 +1,9 @@
-using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace Edgegap.Matchmaking
+namespace Edgegap
 {
-    public class TicketResponseDTO
-    {
-        [JsonProperty("id")]
-        public string ID;
-
-        [JsonProperty("profile")]
-        public string Profile;
-
-        [JsonProperty("created_at")]
-        public DateTime CreatedAt;
-
-        [JsonProperty("status")]
-        public string Status;
-
-#nullable enable
-        [JsonProperty("player_ip")]
-        public string? PlayerIP;
-
-        [JsonProperty("group_id")]
-        public string? GroupID;
-
-        [JsonProperty("team_id")]
-        public string? TeamID;
-
-        [JsonProperty("match_id")]
-        public string? MatchID;
-
-        [JsonProperty("assignment")]
-        public AssignmentDTO? Assignment;
-
-#nullable disable
-
-        public override string ToString()
-        {
-            return JsonConvert.SerializeObject(this);
-        }
-    }
-
-    public class AssignmentDTO
+    public class DeploymentDTO
     {
         [JsonProperty("fqdn")]
         public string Fqdn;
@@ -82,4 +43,3 @@ namespace Edgegap.Matchmaking
         }
     }
 }
-
