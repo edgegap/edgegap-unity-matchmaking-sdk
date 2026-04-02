@@ -140,7 +140,7 @@ namespace Edgegap
             }
             catch (Exception e)
             {
-                L._Warn(
+                L.Warn(
                     $"Edgegap Env | Couldn't parse variable '{keyValuePair.Key.ToString()}', "
                         + $"consider updating Edgegap SDK.\n{e.Message}"
                 );

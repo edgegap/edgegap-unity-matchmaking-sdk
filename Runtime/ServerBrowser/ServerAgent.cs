@@ -17,7 +17,7 @@ namespace Edgegap.ServerBrowser
     {
         private Api<ServerInstanceMetadata, SlotMetadata> Api;
 
-        public MonoBehaviour Handler;
+        public MonoBehaviour Handler { get; private set; }
 
         // BaseUrl may only be set with constructor
         public string BaseUrl { get; }
@@ -31,20 +31,28 @@ namespace Edgegap.ServerBrowser
 
         public Observable<MonitorResponseDTO> Monitor { get; private set; } =
             new Observable<MonitorResponseDTO> { };
-        public Observable<ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata>> Instance
+        public Observable<InstanceDTO<ServerInstanceMetadata, SlotMetadata>> Instance
         {
             get;
             private set;
-        } = new Observable<ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata>>() { };
-        public ConcurrentDictionary<string, byte> PendingConfirmations =
-            new ConcurrentDictionary<string, byte>();
-        public ConcurrentQueue<SlotUpdateDTO<SlotMetadata>> PendingUpdates =
-            new ConcurrentQueue<SlotUpdateDTO<SlotMetadata>>();
-
+        } = new Observable<InstanceDTO<ServerInstanceMetadata, SlotMetadata>>() { };
         public Observable<ConfirmReservationsResponseDTO> Confirmations { get; private set; } =
             new Observable<ConfirmReservationsResponseDTO>() { };
 
-        private bool FlushingSlotUpdates = false;
+        public ConcurrentDictionary<string, byte> PendingConfirmations { get; private set; } =
+            new ConcurrentDictionary<string, byte>();
+        public ConcurrentQueue<SlotUpdateDTO<SlotMetadata>> PendingSlotUpdates
+        {
+            get;
+            private set;
+        } = new ConcurrentQueue<SlotUpdateDTO<SlotMetadata>>();
+        public ConcurrentQueue<ServerInstanceMetadata> PendingInstanceUpdates
+        {
+            get;
+            private set;
+        } = new ConcurrentQueue<ServerInstanceMetadata>();
+
+        private bool FlushingUpdates = false;
 
         public ServerAgent(
             MonoBehaviour handler,
@@ -69,6 +77,60 @@ namespace Edgegap.ServerBrowser
             HeartbeatMaxConsecutiveErrors = heartbeatMaxConsecutiveErrors;
         }
 
+        public void Initialize(
+            UnityAction<
+                Observable<MonitorResponseDTO>,
+                ObservableActionType,
+                string
+            > onMonitorUpdate,
+            UnityAction<
+                Observable<InstanceDTO<ServerInstanceMetadata, SlotMetadata>>,
+                ObservableActionType,
+                string
+            > onInstanceUpdate,
+            UnityAction<
+                Observable<ConfirmReservationsResponseDTO>,
+                ObservableActionType,
+                string
+            > onConfirmationsUpdate = null
+        )
+        {
+            if (string.IsNullOrEmpty(BaseUrl.Trim()))
+            {
+                throw new Exception("BaseUrl not declared.");
+            }
+
+            if (string.IsNullOrEmpty(AuthToken.Trim()))
+            {
+                throw new Exception("AuthToken not declared.");
+            }
+
+            Api = new Api<ServerInstanceMetadata, SlotMetadata>(Handler, AuthToken, BaseUrl);
+
+            L.SubscribeLogger(Monitor, "ServerBrowser", "Monitor");
+            Monitor.Subscribe(onMonitorUpdate);
+
+            L.SubscribeLogger(Instance, "ServerBrowser", "Instance");
+            Instance.Subscribe(onInstanceUpdate);
+
+            L.SubscribeLogger(Confirmations, "ServerBrowser", "Confirmations");
+            if (onConfirmationsUpdate is not null)
+            {
+                Confirmations.Subscribe(onConfirmationsUpdate);
+            }
+
+            if (HeartbeatIntervalSeconds < RequestTimeoutSeconds)
+            {
+                RequestTimeoutSeconds = (int)HeartbeatIntervalSeconds;
+                Monitor._Notify(
+                    $"request timeout clamped to heartbeat [{RequestTimeoutSeconds}]",
+                    ObservableActionType.Warn
+                );
+            }
+
+            Status();
+        }
+
         #region Agent API
         public void Status()
         {
@@ -91,25 +153,23 @@ namespace Edgegap.ServerBrowser
             );
         }
 
-        public void DiscoverInstance(
-            ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata> instance
-        )
+        public void DiscoverInstance(InstanceDTO<ServerInstanceMetadata, SlotMetadata> instance)
         {
             Api.CreateServerInstance(
                 instance,
                 (
-                    ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata> response,
+                    InstanceDTO<ServerInstanceMetadata, SlotMetadata> response,
                     UnityWebRequest request
                 ) =>
                 {
                     Instance._Update(response, "discovered");
-                    Heartbeat();
+                    Handler.StartCoroutine(DelayedHeartbeat());
                 },
                 (string error, UnityWebRequest request) =>
                 {
                     if (request.responseCode == 409)
                     {
-                        Instance._Error("discovery failed (duplicate)");
+                        Instance._Error("discovery duplicate");
                     }
                     else
                     {
@@ -123,7 +183,7 @@ namespace Edgegap.ServerBrowser
         {
             if (Instance.Current is null)
             {
-                Instance._Update(null, "deleted");
+                Instance._Update(null, "instance deleted");
                 return;
             }
 
@@ -131,17 +191,17 @@ namespace Edgegap.ServerBrowser
                 Instance.Current.RequestID,
                 (UnityWebRequest request) =>
                 {
-                    Instance._Update(null, "deleted");
+                    Instance._Update(null, "instance deleted");
                 },
                 (string error, UnityWebRequest request) =>
                 {
                     if (request.responseCode == 404)
                     {
-                        Instance._Update(null, "delete failed (not found)");
+                        Instance._Update(null, "instance delete failed (not found)");
                     }
                     else
                     {
-                        Instance._Error($"delete failed\n{error}", null);
+                        Instance._Error($"instance delete failed\n{error}", null);
                     }
                 }
             );
@@ -151,11 +211,11 @@ namespace Edgegap.ServerBrowser
         {
             if (!PendingConfirmations.TryAdd(pending, 1))
             {
-                Confirmations._Notify("confirmation duplicate", ObservableActionType.Warn);
+                Confirmations._Notify($"duplicate [{pending}]", ObservableActionType.Warn);
                 return;
             }
 
-            Confirmations._Notify("confirmation enqueued");
+            Confirmations._Notify($"enqueued [{pending}]");
 
             if (UpdateMode == UpdateMode.Greedy)
             {
@@ -179,8 +239,8 @@ namespace Edgegap.ServerBrowser
                 return;
             }
 
-            PendingUpdates.Enqueue(update);
-            Instance._Notify("slot update enqueued");
+            PendingSlotUpdates.Enqueue(update);
+            Instance._Notify($"slot update enqueued [{update.Name}]");
 
             if (UpdateMode == UpdateMode.Greedy)
             {
@@ -190,111 +250,13 @@ namespace Edgegap.ServerBrowser
 
         public void UpdateInstance(ServerInstanceMetadata metadata)
         {
-            // todo implement update instance
-        }
-        #endregion
+            PendingInstanceUpdates.Enqueue(metadata);
+            Instance._Notify($"instance update enqueued");
 
-        #region Initialization
-        public void Initialize(
-            UnityAction<
-                Observable<MonitorResponseDTO>,
-                ObservableActionType,
-                string
-            > onMonitorUpdate,
-            UnityAction<
-                Observable<ServerInstanceDTO<ServerInstanceMetadata, SlotMetadata>>,
-                ObservableActionType,
-                string
-            > onInstanceUpdate,
-            UnityAction<
-                Observable<ConfirmReservationsResponseDTO>,
-                ObservableActionType,
-                string
-            > onConfirmationsUpdate = null
-        )
-        {
-            if (string.IsNullOrEmpty(BaseUrl.Trim()))
+            if (UpdateMode == UpdateMode.Greedy)
             {
-                throw new Exception("BaseUrl not declared.");
+                FlushConfirmations();
             }
-
-            if (string.IsNullOrEmpty(AuthToken.Trim()))
-            {
-                throw new Exception("AuthToken not declared.");
-            }
-
-            Api = new Api<ServerInstanceMetadata, SlotMetadata>(Handler, AuthToken, BaseUrl);
-
-            SubscribeLogger(Monitor, "Monitor");
-            Monitor.Subscribe(onMonitorUpdate);
-
-            SubscribeLogger(Instance, "Instance");
-            Instance.Subscribe(onInstanceUpdate);
-
-            SubscribeLogger(Confirmations, "Confirmations");
-            if (onConfirmationsUpdate is not null)
-            {
-                Confirmations.Subscribe(onConfirmationsUpdate);
-            }
-
-            if (HeartbeatIntervalSeconds < RequestTimeoutSeconds)
-            {
-                RequestTimeoutSeconds = (int)HeartbeatIntervalSeconds;
-                Monitor._Notify("request timeout clamped to heartbeat", ObservableActionType.Warn);
-            }
-
-            Status();
-        }
-
-        internal void SubscribeLogger<O>(
-            Observable<O> observable,
-            string subject,
-            bool enabled = true
-        )
-        {
-            observable.Subscribe(
-                (Observable<O> obs, ObservableActionType type, string message) =>
-                {
-                    if (!enabled)
-                        return;
-
-                    if (type == ObservableActionType.Update)
-                    {
-                        L._Log(
-                            L._FormatUpdateMessage(
-                                "Server Browser",
-                                subject,
-                                message,
-                                obs.Previous,
-                                obs.Current
-                            )
-                        );
-                    }
-                    else if (type == ObservableActionType.Error)
-                    {
-                        L._Error(
-                            L._FormatErrorMessage("Server Browser", subject, message, obs.Current)
-                        );
-                    }
-                    else
-                    {
-                        string log = L._FormatNotifyMessage(
-                            "Server Browser",
-                            subject,
-                            message,
-                            obs.Current
-                        );
-                        if (type == ObservableActionType.Log)
-                        {
-                            L._Log(log);
-                        }
-                        else
-                        {
-                            L._Warn(log);
-                        }
-                    }
-                }
-            );
         }
         #endregion
 
@@ -317,7 +279,7 @@ namespace Edgegap.ServerBrowser
                 (KeepAliveResponseDTO keepalive, UnityWebRequest request) =>
                 {
                     Handler.StartCoroutine(DelayedHeartbeat());
-                    if (!FlushingSlotUpdates)
+                    if (!FlushingUpdates)
                     {
                         FlushConfirmations();
                     }
@@ -346,7 +308,7 @@ namespace Edgegap.ServerBrowser
         {
             if (PendingConfirmations.IsEmpty)
             {
-                if (!PendingUpdates.IsEmpty)
+                if (!PendingSlotUpdates.IsEmpty)
                 {
                     FlushSlotUpdates();
                 }
@@ -368,7 +330,7 @@ namespace Edgegap.ServerBrowser
                 new ConfirmReservationsDTO { UserIDs = staged },
                 (ConfirmReservationsResponseDTO response, UnityWebRequest request) =>
                 {
-                    Confirmations._Update(response, "reservations confirmed");
+                    Confirmations._Update(response, "confirmed");
                     response.Slots.ForEach(slot =>
                     {
                         int allocatedSeats = (
@@ -378,24 +340,28 @@ namespace Edgegap.ServerBrowser
                         );
                         if (allocatedSeats > 0)
                         {
-                            PendingUpdates.Enqueue(
+                            PendingSlotUpdates.Enqueue(
                                 new SlotUpdateDTO<SlotMetadata>(slot.Name, allocatedSeats * -1)
                             );
-                            Instance._Notify("slot update enqueued");
+                            Instance._Notify($"slot update enqueued [{slot.Name}]");
                         }
                     });
                     FlushSlotUpdates();
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    Confirmations._Error($"confirmation failed\n{error}");
+                    foreach (var pending in staged)
+                    {
+                        PendingConfirmations.TryAdd(pending, 1);
+                    }
+                    Confirmations._Error($"failed\n{error}");
                 }
             );
         }
 
         internal void FlushSlotUpdates()
         {
-            if (FlushingSlotUpdates)
+            if (FlushingUpdates)
             {
                 Instance._Notify(
                     "client throttled concurrent slot update",
@@ -404,11 +370,11 @@ namespace Edgegap.ServerBrowser
                 return;
             }
 
-            FlushingSlotUpdates = true;
+            FlushingUpdates = true;
             Dictionary<string, SlotUpdateDTO<SlotMetadata>> mergedUpdates =
                 new Dictionary<string, SlotUpdateDTO<SlotMetadata>>();
 
-            while (PendingUpdates.TryDequeue(out SlotUpdateDTO<SlotMetadata> update))
+            while (PendingSlotUpdates.TryDequeue(out SlotUpdateDTO<SlotMetadata> update))
             {
                 if (!mergedUpdates.ContainsKey(update.Name))
                 {
@@ -440,24 +406,61 @@ namespace Edgegap.ServerBrowser
                         Instance.Current.Slots[
                             Instance.Current.Slots.FindIndex(slot => slot.Name == update.Name)
                         ] = slot;
-                        Instance._Update(Instance.Current, "slot updated");
+                        Instance._Update(Instance.Current, $"slot updated [{update.Name}]");
                         updatesFinished.Enqueue(update.Name);
                     },
                     (string error, UnityWebRequest request) =>
                     {
                         Instance._Error($"slot update failed, enqueuing for retry\n{error}");
-                        PendingUpdates.Enqueue(update);
+                        PendingSlotUpdates.Enqueue(update);
                         updatesFinished.Enqueue(update.Name);
                     }
                 );
             }
-            Handler.StartCoroutine(WaitForUpdates(updatesFinished, mergedUpdates.Count));
+            Handler.StartCoroutine(
+                WaitForUpdates(updatesFinished, mergedUpdates.Count, FlushInstanceUpdates)
+            );
         }
 
-        internal IEnumerator WaitForUpdates(ConcurrentQueue<string> updates, int expectedCount)
+        internal IEnumerator WaitForUpdates(
+            ConcurrentQueue<string> updates,
+            int expectedCount,
+            Action onComplete
+        )
         {
             yield return new WaitUntil(() => updates.Count == expectedCount);
-            FlushingSlotUpdates = false;
+            onComplete.Invoke();
+        }
+
+        internal void FlushInstanceUpdates()
+        {
+            if (!FlushingUpdates)
+            {
+                FlushingUpdates = true;
+            }
+            ServerInstanceMetadata mergedUpdate = Instance.Current.Metadata;
+            while (PendingInstanceUpdates.TryDequeue(out ServerInstanceMetadata update))
+            {
+                mergedUpdate = mergedUpdate.Merge(update);
+            }
+            Api.UpdateServerInstance(
+                Instance.Current.RequestID,
+                new InstanceUpdateDTO<ServerInstanceMetadata>() { Metadata = mergedUpdate },
+                (
+                    InstanceDTO<ServerInstanceMetadata, SlotMetadata> response,
+                    UnityWebRequest request
+                ) =>
+                {
+                    Instance._Update(response, "instance updated");
+                    FlushingUpdates = false;
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    Instance._Error($"instance update failed, enqueuing for retry\n{error}");
+                    PendingInstanceUpdates.Enqueue(mergedUpdate);
+                    FlushingUpdates = false;
+                }
+            );
         }
         #endregion
     }

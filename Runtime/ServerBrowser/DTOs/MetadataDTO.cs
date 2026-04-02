@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
 
@@ -5,10 +7,8 @@ namespace Edgegap.ServerBrowser
 {
     public class MetadataDTO
     {
-        public static JsonSerializerSettings SerializationSettings = new JsonSerializerSettings()
-        {
-            NullValueHandling = NullValueHandling.Ignore,
-        };
+        [JsonIgnore]
+        public HashSet<string> _UnsetKeys = new HashSet<string>();
 
         public T Merge<T>(T other)
             where T : MetadataDTO, new()
@@ -16,11 +16,21 @@ namespace Edgegap.ServerBrowser
             T result = new T();
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public;
 
-            foreach (var prop in typeof(T).GetProperties(flags))
+            foreach (var field in result.GetType().GetFields(flags))
             {
-                if (!prop.CanRead || !prop.CanWrite || prop.GetIndexParameters().Length > 0)
-                    continue;
-                prop.SetValue(result, prop.GetValue(other) ?? prop.GetValue(this));
+                if (field.Name == "_UnsetKeys")
+                {
+                    field.SetValue(
+                        result,
+                        new HashSet<string>(
+                            other._UnsetKeys.ToList().Concat(this._UnsetKeys.ToList())
+                        )
+                    );
+                }
+                else
+                {
+                    field.SetValue(result, field.GetValue(other) ?? field.GetValue(this));
+                }
             }
 
             return result;
@@ -28,7 +38,14 @@ namespace Edgegap.ServerBrowser
 
         public override string ToString()
         {
-            return JsonConvert.SerializeObject(this, SerializationSettings);
+            if (_UnsetKeys != null)
+            {
+                foreach (var key in _UnsetKeys)
+                {
+                    this.GetType().GetProperty(key).SetValue(this, null);
+                }
+            }
+            return JsonConvert.SerializeObject(this);
         }
     }
 

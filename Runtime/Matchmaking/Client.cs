@@ -325,17 +325,17 @@ namespace Edgegap.Matchmaking
             MatchmakingApi = new Api<T, A>(Handler, AuthToken, BaseUrl);
             Ping = new Edgegap.Ping(Handler);
 
-            _SubscribeLogger(Monitor, "Monitor");
+            L.SubscribeLogger(Monitor, "Matchmaking", "Monitor");
             Monitor.Subscribe(onMonitorUpdate);
 
-            _SubscribeLogger(Ticket, "Ticket", LogTicketUpdates);
+            L.SubscribeLogger(Ticket, "Matchmaking", "Ticket", LogTicketUpdates);
             _SubscribePlayerPrefSave(Ticket, "Ticket", PLAYER_PREFS_KEY_TICKET);
             if (onTicketUpdate is not null)
             {
                 Ticket.Subscribe(onTicketUpdate);
             }
 
-            _SubscribeLogger(Assignment, "Assignment", LogAssignmentUpdates);
+            L.SubscribeLogger(Assignment, "Matchmaking", "Assignment", LogAssignmentUpdates);
             _SubscribePlayerPrefSave(Assignment, "Assignment", PLAYER_PREFS_KEY_ASSIGNMENT);
             Assignment.Subscribe(onAssignmentUpdate);
 
@@ -396,57 +396,6 @@ namespace Edgegap.Matchmaking
             }
         }
 
-        internal void _SubscribeLogger<O>(
-            Observable<O> observable,
-            string subject,
-            bool enabled = true
-        )
-        {
-            observable.Subscribe(
-                (Observable<O> obs, ObservableActionType type, string message) =>
-                {
-                    if (!enabled)
-                        return;
-
-                    if (type == ObservableActionType.Update)
-                    {
-                        L._Log(
-                            L._FormatUpdateMessage(
-                                "Matchmaking",
-                                subject,
-                                message,
-                                obs.Previous,
-                                obs.Current
-                            )
-                        );
-                    }
-                    else if (type == ObservableActionType.Error)
-                    {
-                        L._Error(
-                            L._FormatErrorMessage("Matchmaking", subject, message, obs.Current)
-                        );
-                    }
-                    else
-                    {
-                        string log = L._FormatNotifyMessage(
-                            "Matchmaking",
-                            subject,
-                            message,
-                            obs.Current
-                        );
-                        if (type == ObservableActionType.Log)
-                        {
-                            L._Log(log);
-                        }
-                        else
-                        {
-                            L._Warn(log);
-                        }
-                    }
-                }
-            );
-        }
-
         internal void _SubscribePlayerPrefSave<O>(
             Observable<O> observable,
             string name,
@@ -475,7 +424,7 @@ namespace Edgegap.Matchmaking
                     }
                     catch (Exception e)
                     {
-                        L._Error($"Matchmaking | Serializing '{name}' failed.\n{e.Message}");
+                        L.Error($"Matchmaking | Serializing '{name}' failed.\n{e.Message}");
                     }
                 }
             );
@@ -534,7 +483,7 @@ namespace Edgegap.Matchmaking
                 {
                     if (consecutiveErrors + 1 > MaxConsecutivePollingErrors)
                     {
-                        L._Error(
+                        L.Error(
                             $"Matchmaking | Reached maximum assignment polling attempts.\n{error}"
                         );
                         Assignment._Error($"polling failed, reached maximum retries\n{error}");

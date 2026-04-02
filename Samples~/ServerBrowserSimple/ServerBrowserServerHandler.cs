@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using Edgegap;
 using Edgegap.ServerBrowser;
-using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -19,7 +18,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
     public string BaseUrl;
     public string ServerToken;
 
-    [Header("Lifecycle")]
+    [Header("Updates")]
     public bool AcceptExpiredReservations = false;
 
     [EnumButtons]
@@ -51,6 +50,8 @@ public class ServerBrowserServerHandler : MonoBehaviour
         {
             Instance = this;
         }
+
+        DontDestroyOnLoad(this.gameObject);
     }
 
     public void Start()
@@ -67,7 +68,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
         if (MockEnv)
         {
             // define mock env variables here
-            env["ARBITRIUM_REQUEST_ID"] = "Editor";
+            env["ARBITRIUM_REQUEST_ID"] = "editor";
             env["ARBITRIUM_PUBLIC_IP"] = "172.236.117.196";
             env["ARBITRIUM_DEPLOYMENT_TAGS"] = "tag1,tag2";
             env["ARBITRIUM_HOST_BASE_CLOCK_FREQUENCY"] = "2000";
@@ -97,10 +98,10 @@ public class ServerBrowserServerHandler : MonoBehaviour
         ServerAgent.Initialize(
             (Observable<MonitorResponseDTO> monitor, ObservableActionType action, string message) =>
             {
-                if (message == "healthy")
+                if (action == ObservableActionType.Update && message == "healthy")
                 {
                     ServerAgent.DiscoverInstance(
-                        new ServerInstanceDTO<MyInstanceMetadata, MySlotMetadata>()
+                        new InstanceDTO<MyInstanceMetadata, MySlotMetadata>()
                         {
                             RequestID = DeploymentEnv.RequestID,
                             Metadata = new MyInstanceMetadata()
@@ -126,62 +127,61 @@ public class ServerBrowserServerHandler : MonoBehaviour
                         }
                     );
                 }
-                else if (message != "healthy")
+                else if (action == ObservableActionType.Error || message == "unhealthy")
                 {
                     // todo handle outage/maintenance
-                    L._Log(
+                    L.Log(
                         $"Server Browser Server Handler | Service is unhealthy.\n{monitor.Current}"
                     );
+                    // SelfStopDeployment(); // optionally self-stop deployment if not discoverable
                 }
             },
             (
-                Observable<ServerInstanceDTO<MyInstanceMetadata, MySlotMetadata>> instance,
+                Observable<InstanceDTO<MyInstanceMetadata, MySlotMetadata>> instance,
                 ObservableActionType action,
                 string message
             ) =>
             {
-                if (action == ObservableActionType.Update)
+                if (action == ObservableActionType.Error && message.Contains("discovery failed"))
                 {
-                    if (
-                        action == ObservableActionType.Error
-                        && message.Contains("discovery failed")
-                    )
-                    {
-                        ServerAgent.DeleteInstance();
-                    }
-                    else if (message.Contains("delete"))
-                    {
-                        SelfStopDeployment();
-                    }
+                    ServerAgent.DeleteInstance();
+                }
 
-                    // todo delete testing code
-                    if (message.Contains("discovered"))
-                    {
-                        StartCoroutine(RunTests());
-                    }
+                if (message.Contains("instance delete"))
+                {
+                    SelfStopDeployment();
                 }
             },
             (
                 Observable<ConfirmReservationsResponseDTO> confirmations,
                 ObservableActionType action,
                 string message
-            ) => {
-                // todo handle connections update
+            ) =>
+            {
+                if (action == ObservableActionType.Log && message.StartsWith("enqueued"))
+                {
+                    // todo optionally authenticate against third party
+                }
+
+                if (action == ObservableActionType.Update && message == "confirmed")
+                {
+                    // todo handle accepted, expired, and unknown connections
+                }
             }
         );
 
-        L._Log(
+        L.Log(
             $"Server Browser Server Handler | Started successfully for deployment '{DeploymentEnv.RequestID}'."
         );
     }
 
     public IEnumerator RunTests()
     {
-        Debug.Log("Running tests");
         yield return new WaitForSeconds(5f);
+        ServerAgent.UpdateInstance(new MyInstanceMetadata() { Name = "modified" });
         OnPlayerJoined("test");
         OnPlayerJoined("test-unknown");
-        // ServerAgent.UpdateSlot(new SlotUpdateDTO<MySlotMetadata>("main", -15));
+        ServerAgent.UpdateSlot(new SlotUpdateDTO<MySlotMetadata>("main", -15));
         yield return new WaitForSeconds(60f);
         OnPlayerJoined("test-expired");
         OnPlayerAbandoned("main");
@@ -220,7 +220,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
     {
         if (MockEnv)
         {
-            L._Log(
+            L.Log(
                 "Server Browser Server Handler | Invoking Application.Quit() in mock environment."
             );
 #if UNITY_EDITOR
@@ -236,7 +236,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
             || string.IsNullOrEmpty(DeploymentEnv.SelfStopToken)
         )
         {
-            L._Error(
+            L.Error(
                 "Server Browser Server Handler | Self-Stop URL or Token not set, unable to self-stop."
             );
             return;
@@ -247,13 +247,13 @@ public class ServerBrowserServerHandler : MonoBehaviour
             DeploymentEnv.SelfStopToken,
             (string response, UnityWebRequest request) =>
             {
-                L._Log(
+                L.Log(
                     $"Server Browser Server Handler | Successfully called Self-Stop API.\n{response}"
                 );
             },
             (string error, UnityWebRequest request) =>
             {
-                L._Error($"Server Browser Server Handler | Couldn't reach Self-Stop API.\n{error}");
+                L.Error($"Server Browser Server Handler | Couldn't reach Self-Stop API.\n{error}");
             }
         );
     }

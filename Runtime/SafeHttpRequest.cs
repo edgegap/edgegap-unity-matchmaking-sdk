@@ -57,7 +57,7 @@ namespace Edgegap
                             && (req.responseCode == 429 || req.responseCode >= 500)
                         )
                         {
-                            L._Warn($"Retrying ({requestAttemptsLeft} left) POST {url}.\n{error}");
+                            L.Warn($"Retrying ({requestAttemptsLeft} left) POST {url}.\n{error}");
                             Post(
                                 url,
                                 authToken,
@@ -100,7 +100,7 @@ namespace Edgegap
                             && (req.responseCode == 429 || req.responseCode >= 500)
                         )
                         {
-                            L._Warn($"Retrying ({requestAttemptsLeft} left) GET {url}.\n{error}");
+                            L.Warn($"Retrying ({requestAttemptsLeft} left) GET {url}.\n{error}");
                             Get(
                                 url,
                                 authToken,
@@ -142,9 +142,7 @@ namespace Edgegap
                             && (req.responseCode == 429 || req.responseCode >= 500)
                         )
                         {
-                            L._Warn(
-                                $"Retrying ({requestAttemptsLeft} left) DELETE {url}.\n{error}"
-                            );
+                            L.Warn($"Retrying ({requestAttemptsLeft} left) DELETE {url}.\n{error}");
                             Delete(
                                 url,
                                 authToken,
@@ -188,7 +186,7 @@ namespace Edgegap
                             && (req.responseCode == 429 || req.responseCode >= 500)
                         )
                         {
-                            L._Warn($"Retrying ({requestAttemptsLeft} left) PATCH {url}.\n{error}");
+                            L.Warn($"Retrying ({requestAttemptsLeft} left) PATCH {url}.\n{error}");
                             Delete(
                                 url,
                                 authToken,
