@@ -100,14 +100,14 @@ namespace Edgegap.ServerBrowser
             > onSuccessDelegate,
             Action<string, UnityWebRequest> onErrorDelegate,
             string cursor = null,
-            string filter = "",
+            FilterCompiler filter = null,
             string order = "",
             uint limit = 20
         )
         {
             List<string> queryParams = new List<string>()
             {
-                { $"filter={filter}" },
+                { $"filter={filter?.ToString() ?? ""}" },
                 { $"order={order}" },
                 { $"limit={limit}" },
             };

@@ -27,7 +27,7 @@ namespace Edgegap.ServerBrowser
             private set;
         } = new Observable<InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata>> { };
 
-        private string Filter = "";
+        private FilterCompiler Filter;
         private string Order = "";
         private uint Limit = 20;
 
@@ -61,27 +61,28 @@ namespace Edgegap.ServerBrowser
         }
 
         public void ListInstances(
-            Action<
-                InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata>,
-                UnityWebRequest
-            > onSuccessDelegate,
-            Action<string, UnityWebRequest> onErrorDelegate,
             string cursor = null,
-            string filter = "",
+            FilterCompiler filter = null,
             string order = "",
             uint limit = 20
         )
         {
+            Filter = filter;
+            Order = order;
+            Limit = limit;
+
             Api.ListServerInstances(
                 (
                     InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata> response,
                     UnityWebRequest request
                 ) =>
                 {
-                    Instances._Update(response, "retrieved");
-                    onSuccessDelegate(response, request);
+                    Instances._Update(response, "list retrieved");
                 },
-                onErrorDelegate,
+                (string error, UnityWebRequest request) =>
+                {
+                    Instances._Error($"list retrieval failed\n{error}", null);
+                },
                 cursor,
                 filter,
                 order,
@@ -89,42 +90,22 @@ namespace Edgegap.ServerBrowser
             );
         }
 
-        public void GetNextPage(
-            Action<
-                InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata>,
-                UnityWebRequest
-            > onSuccessDelegate,
-            Action<string, UnityWebRequest> onErrorDelegate
-        )
+        public void GetNextPage()
         {
             if (Instances.Current is null || Instances.Current.Pagination.NextCursor is null)
             {
-                // todo on error no next page
+                Instances._Error("last page reached");
             }
 
-            ListInstances(
-                onSuccessDelegate,
-                onErrorDelegate,
-                Instances.Current.Pagination.NextCursor,
-                Filter,
-                Order,
-                Limit
-            );
+            ListInstances(Instances.Current.Pagination.NextCursor, Filter, Order, Limit);
         }
 
         public void GetPreviousPage() { }
 
-        public void Refresh(
-            Action<
-                InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata>,
-                UnityWebRequest
-            > onSuccessDelegate,
-            Action<string, UnityWebRequest> onErrorDelegate
-        )
+        public void Refresh()
         {
-            // todo delete cache before refreshing
             Instances._Update(null, "cache deleted");
-            ListInstances(onSuccessDelegate, onErrorDelegate, null, Filter, Order, Limit);
+            ListInstances(null, Filter, Order, Limit);
         }
         #endregion
 
