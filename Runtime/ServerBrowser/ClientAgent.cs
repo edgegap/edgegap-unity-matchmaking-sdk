@@ -1,0 +1,224 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.Networking;
+
+namespace Edgegap.ServerBrowser
+{
+    using L = Logger;
+
+    public class ClientAgent<ServerInstanceMetadata, SlotMetadata>
+        where ServerInstanceMetadata : MetadataDTO, new()
+        where SlotMetadata : MetadataDTO, new()
+    {
+        private Api<ServerInstanceMetadata, SlotMetadata> Api;
+
+        public MonoBehaviour Handler { get; private set; }
+
+        // BaseUrl may only be set with constructor
+        public string BaseUrl { get; }
+        public string AuthToken { private get; set; }
+        public int RequestTimeoutSeconds;
+
+        public Observable<MonitorResponseDTO> Monitor { get; private set; } =
+            new Observable<MonitorResponseDTO> { };
+        public Observable<InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata>> Instances
+        {
+            get;
+            private set;
+        } = new Observable<InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata>> { };
+
+        private FilterCompiler Filter;
+        private string Order = "";
+        private uint Limit = 20;
+
+        public ClientAgent(
+            MonoBehaviour handler,
+            string baseUrl,
+            string authToken,
+            int requestTimeoutSeconds = 3
+        )
+        {
+            Handler = handler;
+            BaseUrl = baseUrl;
+            AuthToken = authToken;
+
+            RequestTimeoutSeconds = requestTimeoutSeconds;
+        }
+
+        #region Agent API
+        public void Status()
+        {
+            Api.GetMonitor(
+                (MonitorResponseDTO monitor, UnityWebRequest request) =>
+                {
+                    if (monitor.Status.ToLower() == "healthy")
+                    {
+                        Monitor._Update(monitor, "healthy");
+                    }
+                    else
+                    {
+                        Monitor._Update(monitor, "unhealthy");
+                    }
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    Monitor._Error($"get monitor failed (unexpected error)\n{error}", null);
+                }
+            );
+        }
+
+        public void ListInstances(
+            FilterCompiler filter = null,
+            string order = "",
+            uint limit = 20,
+            string cursor = null
+        )
+        {
+            Filter = filter;
+            Order = order;
+            Limit = limit;
+
+            Api.ListServerInstances(
+                (
+                    InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata> response,
+                    UnityWebRequest request
+                ) =>
+                {
+                    Instances._Update(response, "instance list retrieved");
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    Instances._Error($"instance list retrieval failed\n{error}", null);
+                },
+                cursor,
+                filter,
+                order,
+                limit
+            );
+        }
+
+        public void GetNextPage()
+        {
+            if (Instances.Current is null || Instances.Current.Pagination.NextCursor is null)
+            {
+                Instances._Error("instance list last page reached");
+            }
+
+            Api.ListServerInstances(
+                (
+                    InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata> response,
+                    UnityWebRequest request
+                ) =>
+                {
+                    response.ServerInstances.InsertRange(0, Instances.Current.ServerInstances);
+                    Instances._Update(response, "instance list next page retrieved");
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    Instances._Error($"instance list next page retrieval failed\n{error}", null);
+                },
+                Instances.Current.Pagination.NextCursor,
+                Filter,
+                Order,
+                Limit
+            );
+        }
+
+        public void RefreshList()
+        {
+            Instances._Update(null, "cache deleted");
+            ListInstances(Filter, Order, Limit);
+        }
+
+        public void ReserveSeats(string requestID, string slotName, List<string> userIDs)
+        {
+            Api.ReserveSeats(
+                requestID,
+                slotName,
+                new ReservationsDTO()
+                {
+                    Users = userIDs
+                        .Select(userID => new ReservationsUserDTO() { UserID = userID })
+                        .ToList(),
+                },
+                (ReservationsDTO response, UnityWebRequest request) =>
+                {
+                    Instances._Notify("seats reserved");
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    Instances._Error($"seats reservation failed\n{error}");
+                }
+            );
+        }
+
+        public void GetInstanceDetails(string requestID)
+        {
+            Api.GetServerInstance(
+                requestID,
+                (
+                    InstanceDTO<ServerInstanceMetadata, SlotMetadata> response,
+                    UnityWebRequest request
+                ) =>
+                {
+                    int index = Instances.Current.ServerInstances.FindIndex(instance =>
+                        instance.RequestID == requestID
+                    );
+                    if (index == -1)
+                    {
+                        Instances.Current.ServerInstances.Insert(0, response);
+                        Instances._Update(Instances.Current, "instance not cached, prepending");
+                    }
+                    else
+                    {
+                        Instances.Current.ServerInstances[index] = response;
+                        Instances._Update(Instances.Current, "instance details retrieved");
+                    }
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    Instances._Error($"instance details retrieval failed\n{error}");
+                }
+            );
+        }
+
+        #endregion
+
+        public void Initialize(
+            UnityAction<
+                Observable<MonitorResponseDTO>,
+                ObservableActionType,
+                string
+            > onMonitorUpdate,
+            UnityAction<
+                Observable<InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata>>,
+                ObservableActionType,
+                string
+            > onInstancesUpdate
+        )
+        {
+            if (string.IsNullOrEmpty(BaseUrl.Trim()))
+            {
+                throw new Exception("BaseUrl not declared.");
+            }
+
+            if (string.IsNullOrEmpty(AuthToken.Trim()))
+            {
+                throw new Exception("AuthToken not declared.");
+            }
+
+            Api = new Api<ServerInstanceMetadata, SlotMetadata>(Handler, AuthToken, BaseUrl);
+
+            L.SubscribeLogger(Monitor, "ServerBrowser", "Monitor");
+            Monitor.Subscribe(onMonitorUpdate);
+
+            L.SubscribeLogger(Instances, "ServerBrowser", "Instances");
+            Instances.Subscribe(onInstancesUpdate);
+
+            Status();
+        }
+    }
+}
