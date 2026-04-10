@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
@@ -18,6 +20,7 @@ namespace Edgegap.ServerBrowser
         // BaseUrl may only be set with constructor
         public string BaseUrl { get; }
         public string AuthToken { private get; set; }
+        public int RequestTimeoutSeconds;
 
         public Observable<MonitorResponseDTO> Monitor { get; private set; } =
             new Observable<MonitorResponseDTO> { };
@@ -31,11 +34,18 @@ namespace Edgegap.ServerBrowser
         private string Order = "";
         private uint Limit = 20;
 
-        public ClientAgent(MonoBehaviour handler, string baseUrl, string authToken)
+        public ClientAgent(
+            MonoBehaviour handler,
+            string baseUrl,
+            string authToken,
+            int requestTimeoutSeconds = 3
+        )
         {
             Handler = handler;
             BaseUrl = baseUrl;
             AuthToken = authToken;
+
+            RequestTimeoutSeconds = requestTimeoutSeconds;
         }
 
         #region Agent API
@@ -61,10 +71,10 @@ namespace Edgegap.ServerBrowser
         }
 
         public void ListInstances(
-            string cursor = null,
             FilterCompiler filter = null,
             string order = "",
-            uint limit = 20
+            uint limit = 20,
+            string cursor = null
         )
         {
             Filter = filter;
@@ -97,16 +107,87 @@ namespace Edgegap.ServerBrowser
                 Instances._Error("last page reached");
             }
 
-            ListInstances(Instances.Current.Pagination.NextCursor, Filter, Order, Limit);
+            Api.ListServerInstances(
+                (
+                    InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata> response,
+                    UnityWebRequest request
+                ) =>
+                {
+                    response.ServerInstances.InsertRange(0, Instances.Current.ServerInstances);
+                    Instances._Update(response, "list next page retrieved");
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    Instances._Error($"nextPage retrieval failed\n{error}", null);
+                },
+                Instances.Current.Pagination.NextCursor,
+                Filter,
+                Order,
+                Limit
+            );
         }
 
-        public void GetPreviousPage() { }
-
-        public void Refresh()
+        public void RefreshList()
         {
             Instances._Update(null, "cache deleted");
-            ListInstances(null, Filter, Order, Limit);
+            ListInstances(Filter, Order, Limit);
         }
+
+        public void ReserveSeats(string requestID, string slotName, List<string> userIDs)
+        {
+            Api.ReserveSeats(
+                requestID,
+                slotName,
+                new ReservationsDTO()
+                {
+                    Users = userIDs
+                        .Select(userID => new ReservationsUserDTO() { UserID = userID })
+                        .ToList(),
+                },
+                (ReservationsDTO response, UnityWebRequest request) =>
+                {
+                    Instances._Notify("seats reserved");
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    Instances._Error($"seats reservation failed\n{error}");
+                }
+            );
+        }
+
+        public void GetInstanceDetails(string requestID)
+        {
+            Api.GetServerInstance(
+                requestID,
+                (
+                    InstanceDTO<ServerInstanceMetadata, SlotMetadata> response,
+                    UnityWebRequest request
+                ) =>
+                {
+                    int index = Instances.Current.ServerInstances.FindIndex(instance =>
+                        instance.RequestID == requestID
+                    );
+                    if (index == -1)
+                    {
+                        Instances.Current.ServerInstances.Insert(0, response);
+                        Instances._Update(
+                            Instances.Current,
+                            "instance not found in cache, prepending details"
+                        );
+                    }
+                    else
+                    {
+                        Instances.Current.ServerInstances[index] = response;
+                        Instances._Update(Instances.Current, "instance details retrieved");
+                    }
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    Instances._Error($"instance details retrieval failed\n{error}");
+                }
+            );
+        }
+
         #endregion
 
         public void Initialize(
@@ -114,7 +195,12 @@ namespace Edgegap.ServerBrowser
                 Observable<MonitorResponseDTO>,
                 ObservableActionType,
                 string
-            > onMonitorUpdate
+            > onMonitorUpdate,
+            UnityAction<
+                Observable<InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata>>,
+                ObservableActionType,
+                string
+            > onInstancesUpdate
         )
         {
             if (string.IsNullOrEmpty(BaseUrl.Trim()))
@@ -131,6 +217,9 @@ namespace Edgegap.ServerBrowser
 
             L.SubscribeLogger(Monitor, "ServerBrowser", "Monitor");
             Monitor.Subscribe(onMonitorUpdate);
+
+            L.SubscribeLogger(Instances, "ServerBrowser", "Instances");
+            Instances.Subscribe(onInstancesUpdate);
 
             Status();
         }

@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using Edgegap;
 using Edgegap.ServerBrowser;
 using UnityEngine;
+using L = Edgegap.Logger;
 using MyInstanceMetadata = Edgegap.ServerBrowser.SimpleInstanceMetadataDTO;
 using MySlotMetadata = Edgegap.ServerBrowser.SimpleSlotMetadataDTO;
 
@@ -14,17 +16,16 @@ public class ServerBrowserClientHandler : MonoBehaviour
     public string ClientToken;
 
     [Header("Exponential Retry")]
-    public int RequestTimeoutSeconds = 10;
-    public int MaxConsecutiveRetryErrors = 10;
+    public int RequestTimeoutSeconds = 3;
 
     public static ServerBrowserClientHandler Instance { get; private set; }
     private ClientAgent<MyInstanceMetadata, MySlotMetadata> ClientAgent;
-    private SafeHttpRequest Request;
+
+    private InstanceDTO<MyInstanceMetadata, MySlotMetadata> SelectedInstance;
 
     public void Awake()
     {
         // If there is an instance, and it's not me, delete myself.
-
         if (Instance != null && Instance != this)
         {
             Destroy(this);
@@ -37,5 +38,111 @@ public class ServerBrowserClientHandler : MonoBehaviour
         DontDestroyOnLoad(this.gameObject);
     }
 
-    public void Start() { }
+    public void Start()
+    {
+        ClientAgent = new ClientAgent<MyInstanceMetadata, MySlotMetadata>(
+            this,
+            BaseUrl,
+            ClientToken,
+            RequestTimeoutSeconds
+        );
+        ClientAgent.Initialize(
+            (Observable<MonitorResponseDTO> monitor, ObservableActionType action, string message) =>
+            {
+                if (action == ObservableActionType.Update && message == "healthy")
+                {
+                    // todo move ListInstances to a UI trigger
+                    ClientAgent.ListInstances(
+                        new FilterCompiler()
+                        {
+                            Filters = new List<FilterBase>()
+                            {
+                                new IntFilter()
+                                {
+                                    Field = "joinable_seats",
+                                    Operator = IntOperator._GreaterThanOrEqualTo,
+                                    Value = 1,
+                                },
+                            },
+                        }
+                    );
+                }
+                else if (action == ObservableActionType.Error || message == "unhealthy")
+                {
+                    // todo handle outage/maintenance
+                    L.Log(
+                        $"ServerBrowser ClientHandler | Service is unhealthy.\n{monitor.Current}"
+                    );
+                }
+            },
+            (
+                Observable<InstanceListResponseDTO<MyInstanceMetadata, MySlotMetadata>> instances,
+                ObservableActionType action,
+                string message
+            ) =>
+            {
+                if (action == ObservableActionType.Log && message == "seats reserved")
+                {
+                    // todo join game on pre-defined game port
+                    L.Log(
+                        $"ServerBrowser ClientHandler | Joining game: {SelectedInstance.Server.Ports["gameport"].Link}"
+                    );
+                }
+                else if (action == ObservableActionType.Update)
+                {
+                    if (new List<string> { "list retrieved", "cache deleted" }.Contains(message))
+                    {
+                        // todo store joinable instances in a list for UI selection & update UI
+                        int joinableInstances = instances.Current.ServerInstances.Count;
+                        L.Log(
+                            $"ServerBrowser ClientHandler | Found total '{joinableInstances}' instances with capacity."
+                        );
+
+                        if (joinableInstances == 0)
+                        {
+                            L.Log(
+                                "ServerBrowser ClientHandler | No instances with capacity found."
+                            );
+                            return;
+                        }
+
+                        // picks first instance - alternatively select instance with a UI trigger (player choice)
+                        SelectedInstance = instances.Current.ServerInstances[0];
+                        L.Log(
+                            $"ServerBrowser ClientHandler | Retrieving instance details for '{SelectedInstance.RequestID}'"
+                        );
+                        ClientAgent.GetInstanceDetails(SelectedInstance.RequestID);
+                    }
+                    else if (message == "instance details retrieved")
+                    {
+                        // picks first joinable slot - alternatively let user choose a slot from the instance
+
+                        // update selected instance with the latest details
+                        SelectedInstance = instances.Current.ServerInstances.Find(instance =>
+                            instance.RequestID == SelectedInstance.RequestID
+                        );
+                        L.Log(
+                            $"ServerBrowser ClientHandler | Instance details retrieved for '{SelectedInstance.RequestID}'"
+                        );
+                        string slotName = SelectedInstance
+                            .Slots.Find(slot => slot.JoinableSeats >= 1)
+                            .Name;
+                        L.Log(
+                            $"ServerBrowser ClientHandler | Attempting seat reservation for instance '{SelectedInstance.RequestID}'"
+                        );
+                        ClientAgent.ReserveSeats(
+                            SelectedInstance.RequestID,
+                            slotName,
+                            new List<string> { "player1" } // todo replace with dynamic player IDs
+                        );
+                    }
+                }
+                else if (action == ObservableActionType.Error)
+                {
+                    // todo convey errors through a UI notification
+                    L.Error($"ServerBrowser ClientHandler | Unexpected error.");
+                }
+            }
+        );
+    }
 }

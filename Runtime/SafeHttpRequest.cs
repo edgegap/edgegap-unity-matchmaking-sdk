@@ -16,16 +16,15 @@ namespace Edgegap
         internal int TimeoutSeconds = 3;
         internal Func<float> BackoffSeconds = () => 1 + (0.1f * Random.value);
 
-        public SafeHttpRequest(MonoBehaviour parent)
+        public SafeHttpRequest(
+            MonoBehaviour parent,
+            int timeoutSeconds = 0,
+            Func<float> backoffSeconds = null
+        )
         {
             Parent = parent;
-        }
-
-        public SafeHttpRequest(MonoBehaviour parent, int timeoutSeconds, Func<float> backoffSeconds)
-        {
-            Parent = parent;
-            BackoffSeconds = backoffSeconds;
-            TimeoutSeconds = timeoutSeconds;
+            TimeoutSeconds = timeoutSeconds > 0 ? timeoutSeconds : TimeoutSeconds;
+            BackoffSeconds = backoffSeconds ?? BackoffSeconds;
         }
 
         public void Post(

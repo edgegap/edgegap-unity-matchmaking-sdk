@@ -3,9 +3,11 @@ using System.Linq;
 
 namespace Edgegap.ServerBrowser
 {
+    using FloatOperator = IntOperator;
+
     public class FilterCompiler
     {
-        private List<FilterBase> Filters = new List<FilterBase>();
+        public List<FilterBase> Filters = new List<FilterBase>();
 
         public override string ToString()
         {
@@ -55,7 +57,7 @@ namespace Edgegap.ServerBrowser
         public static readonly string _Contains = "contains";
     }
 
-    public static class NumberOperator
+    public static class IntOperator
     {
         public static readonly string _Equals = "eq";
         public static readonly string _NotEquals = "ne";
@@ -63,11 +65,11 @@ namespace Edgegap.ServerBrowser
         public static readonly string _LessThanOrEqualTo = "lte";
         public static readonly string _GreaterThan = "gt";
         public static readonly string _GreaterThanOrEqualTo = "gte";
+    }
 
-        public static class BoolOperator
-        {
-            public static readonly string _Equals = "eq";
-            public static readonly string _NotEquals = "ne";
-        }
+    public static class BoolOperator
+    {
+        public static readonly string _Equals = "eq";
+        public static readonly string _NotEquals = "ne";
     }
 }

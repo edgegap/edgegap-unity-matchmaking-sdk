@@ -1,8 +1,30 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace Edgegap
+namespace Edgegap.ServerBrowser
 {
+    public class ReservationsDTO
+    {
+        [JsonProperty("users")]
+        public List<ReservationsUserDTO> Users;
+
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
+        }
+    }
+
+    public class ReservationsUserDTO
+    {
+        [JsonProperty("user_id")]
+        public string UserID;
+
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
+        }
+    }
+
     public class ConfirmReservationsDTO
     {
         [JsonProperty("user_ids")]

@@ -21,9 +21,14 @@ namespace Edgegap.ServerBrowser
         internal string PATH_SLOTS = "slots";
         internal string PATH_RESERVATIONS = "reservations";
 
-        public Api(MonoBehaviour parent, string authToken, string baseUrl)
+        public Api(
+            MonoBehaviour parent,
+            string authToken,
+            string baseUrl,
+            int requestTimeoutSeconds = 0
+        )
         {
-            Request = new SafeHttpRequest(parent);
+            Request = new SafeHttpRequest(parent, requestTimeoutSeconds);
             AuthToken = authToken;
             BaseUrl = baseUrl;
         }
@@ -292,6 +297,39 @@ namespace Edgegap.ServerBrowser
                     }
                 },
                 onErrorDelegate
+            );
+        }
+
+        public void ReserveSeats(
+            string requestID,
+            string slotName,
+            ReservationsDTO reservations,
+            Action<ReservationsDTO, UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate
+        )
+        {
+            Request.Post(
+                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}/{PATH_SLOTS}/{slotName}/{PATH_RESERVATIONS}",
+                AuthToken,
+                reservations.ToString(),
+                (string response, UnityWebRequest request) =>
+                {
+                    try
+                    {
+                        ReservationsDTO reservations =
+                            JsonConvert.DeserializeObject<ReservationsDTO>(response);
+                        onSuccessDelegate(reservations, request);
+                    }
+                    catch (Exception e)
+                    {
+                        L.Error(
+                            $"Server Browser | Couldn't parse seat reservations, update Edgegap SDK.\n{e.Message}"
+                        );
+                        throw;
+                    }
+                },
+                onErrorDelegate,
+                3
             );
         }
 

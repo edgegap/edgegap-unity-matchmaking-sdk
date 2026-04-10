@@ -41,7 +41,6 @@ public class ServerBrowserServerHandler : MonoBehaviour
     public void Awake()
     {
         // if there is an instance, and it's not me, delete myself.
-
         if (Instance != null && Instance != this)
         {
             Destroy(this);
@@ -131,7 +130,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
                 {
                     // todo handle outage/maintenance
                     L.Log(
-                        $"Server Browser Server Handler | Service is unhealthy.\n{monitor.Current}"
+                        $"ServerBrowser ServerHandler | Service is unhealthy.\n{monitor.Current}"
                     );
                     // SelfStopDeployment(); // optionally self-stop deployment if not discoverable
                 }
@@ -171,21 +170,16 @@ public class ServerBrowserServerHandler : MonoBehaviour
         );
 
         L.Log(
-            $"Server Browser Server Handler | Started successfully for deployment '{DeploymentEnv.RequestID}'."
+            $"ServerBrowser ServerHandler | Started successfully for deployment '{DeploymentEnv.RequestID}'."
         );
     }
 
     public IEnumerator RunTests()
     {
-        yield return new WaitForSeconds(5f);
-        ServerAgent.UpdateInstance(new MyInstanceMetadata() { Name = "modified" });
-        OnPlayerJoined("test");
+        yield return new WaitForSeconds(10f);
+        OnPlayerJoined("player1");
         OnPlayerJoined("test-unknown");
-        ServerAgent.UpdateSlot(new SlotUpdateDTO<MySlotMetadata>("main", -15));
-        yield return new WaitForSeconds(60f);
-        OnPlayerJoined("test-expired");
-        OnPlayerAbandoned("main");
-        OnPlayerAbandoned("main");
+        yield return new WaitForSeconds(30f);
         OnPlayerAbandoned("main");
     }
 
@@ -220,9 +214,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
     {
         if (MockEnv)
         {
-            L.Log(
-                "Server Browser Server Handler | Invoking Application.Quit() in mock environment."
-            );
+            L.Log("ServerBrowser ServerHandler | Invoking Application.Quit() in mock environment.");
 #if UNITY_EDITOR
             EditorApplication.isPlaying = false;
 #else
@@ -237,7 +229,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
         )
         {
             L.Error(
-                "Server Browser Server Handler | Self-Stop URL or Token not set, unable to self-stop."
+                "ServerBrowser ServerHandler | Self-Stop URL or Token not set, unable to self-stop."
             );
             return;
         }
@@ -248,12 +240,12 @@ public class ServerBrowserServerHandler : MonoBehaviour
             (string response, UnityWebRequest request) =>
             {
                 L.Log(
-                    $"Server Browser Server Handler | Successfully called Self-Stop API.\n{response}"
+                    $"ServerBrowser ServerHandler | Successfully called Self-Stop API.\n{response}"
                 );
             },
             (string error, UnityWebRequest request) =>
             {
-                L.Error($"Server Browser Server Handler | Couldn't reach Self-Stop API.\n{error}");
+                L.Error($"ServerBrowser ServerHandler | Couldn't reach Self-Stop API.\n{error}");
             }
         );
     }
