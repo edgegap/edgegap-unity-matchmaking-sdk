@@ -90,7 +90,7 @@ public class ServerBrowserClientHandler : MonoBehaviour
                 }
                 else if (action == ObservableActionType.Update)
                 {
-                    if (new List<string> { "list retrieved", "cache deleted" }.Contains(message))
+                    if (message.Contains("instance list") || message.Contains("cache deleted"))
                     {
                         // todo store joinable instances in a list for UI selection & update UI
                         int joinableInstances = instances.Current.ServerInstances.Count;

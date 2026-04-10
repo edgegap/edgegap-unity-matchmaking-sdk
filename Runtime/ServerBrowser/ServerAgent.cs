@@ -153,7 +153,7 @@ namespace Edgegap.ServerBrowser
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    Monitor._Error($"get monitor failed (unexpected error)\n{error}", null);
+                    Monitor._Error($"get monitor failed\n{error}", null);
                 }
             );
         }
@@ -369,7 +369,7 @@ namespace Edgegap.ServerBrowser
             if (FlushingUpdates)
             {
                 Instance._Notify(
-                    "client throttled concurrent slot update",
+                    "agent throttled concurrent slot update",
                     ObservableActionType.Warn
                 );
                 return;

@@ -87,11 +87,11 @@ namespace Edgegap.ServerBrowser
                     UnityWebRequest request
                 ) =>
                 {
-                    Instances._Update(response, "list retrieved");
+                    Instances._Update(response, "instance list retrieved");
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    Instances._Error($"list retrieval failed\n{error}", null);
+                    Instances._Error($"instance list retrieval failed\n{error}", null);
                 },
                 cursor,
                 filter,
@@ -104,7 +104,7 @@ namespace Edgegap.ServerBrowser
         {
             if (Instances.Current is null || Instances.Current.Pagination.NextCursor is null)
             {
-                Instances._Error("last page reached");
+                Instances._Error("instance list last page reached");
             }
 
             Api.ListServerInstances(
@@ -114,11 +114,11 @@ namespace Edgegap.ServerBrowser
                 ) =>
                 {
                     response.ServerInstances.InsertRange(0, Instances.Current.ServerInstances);
-                    Instances._Update(response, "list next page retrieved");
+                    Instances._Update(response, "instance list next page retrieved");
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    Instances._Error($"nextPage retrieval failed\n{error}", null);
+                    Instances._Error($"instance list next page retrieval failed\n{error}", null);
                 },
                 Instances.Current.Pagination.NextCursor,
                 Filter,
@@ -170,10 +170,7 @@ namespace Edgegap.ServerBrowser
                     if (index == -1)
                     {
                         Instances.Current.ServerInstances.Insert(0, response);
-                        Instances._Update(
-                            Instances.Current,
-                            "instance not found in cache, prepending details"
-                        );
+                        Instances._Update(Instances.Current, "instance not cached, prepending");
                     }
                     else
                     {
