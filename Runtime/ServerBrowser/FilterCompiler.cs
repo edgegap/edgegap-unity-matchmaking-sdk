@@ -51,9 +51,9 @@ namespace Edgegap.ServerBrowser
         public static readonly string _Equals = "eq";
         public static readonly string _NotEquals = "ne";
         public static readonly string _LessThan = "lt";
-        public static readonly string _LessThanOrEqualTo = "lte";
+        public static readonly string _LessThanOrEqualTo = "le";
         public static readonly string _GreaterThan = "gt";
-        public static readonly string _GreaterThanOrEqualTo = "gte";
+        public static readonly string _GreaterThanOrEqualTo = "ge";
         public static readonly string _Contains = "contains";
     }
 
@@ -62,9 +62,9 @@ namespace Edgegap.ServerBrowser
         public static readonly string _Equals = "eq";
         public static readonly string _NotEquals = "ne";
         public static readonly string _LessThan = "lt";
-        public static readonly string _LessThanOrEqualTo = "lte";
+        public static readonly string _LessThanOrEqualTo = "le";
         public static readonly string _GreaterThan = "gt";
-        public static readonly string _GreaterThanOrEqualTo = "gte";
+        public static readonly string _GreaterThanOrEqualTo = "ge";
     }
 
     public static class BoolOperator
