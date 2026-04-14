@@ -30,9 +30,9 @@ namespace Edgegap.ServerBrowser
             private set;
         } = new Observable<InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata>> { };
 
-        private FilterCompiler Filter;
-        private string Order = "";
-        private uint Limit = 20;
+        private FilterCompiler ListFilter;
+        private string ListOrder = "";
+        private uint ListLimit = 20;
 
         public ClientAgent(
             MonoBehaviour handler,
@@ -46,6 +46,40 @@ namespace Edgegap.ServerBrowser
             AuthToken = authToken;
 
             RequestTimeoutSeconds = requestTimeoutSeconds;
+        }
+
+        public void Initialize(
+            UnityAction<
+                Observable<MonitorResponseDTO>,
+                ObservableActionType,
+                string
+            > onMonitorUpdate,
+            UnityAction<
+                Observable<InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata>>,
+                ObservableActionType,
+                string
+            > onInstancesUpdate
+        )
+        {
+            if (string.IsNullOrEmpty(BaseUrl.Trim()))
+            {
+                throw new Exception("BaseUrl not declared.");
+            }
+
+            if (string.IsNullOrEmpty(AuthToken.Trim()))
+            {
+                throw new Exception("AuthToken not declared.");
+            }
+
+            Api = new Api<ServerInstanceMetadata, SlotMetadata>(Handler, AuthToken, BaseUrl);
+
+            L.SubscribeLogger(Monitor, "ServerBrowser", "Monitor");
+            Monitor.Subscribe(onMonitorUpdate);
+
+            L.SubscribeLogger(Instances, "ServerBrowser", "Instances");
+            Instances.Subscribe(onInstancesUpdate);
+
+            Status();
         }
 
         #region Agent API
@@ -77,9 +111,9 @@ namespace Edgegap.ServerBrowser
             string cursor = null
         )
         {
-            Filter = filter;
-            Order = order;
-            Limit = limit;
+            ListFilter = filter;
+            ListOrder = order;
+            ListLimit = limit;
 
             Api.ListServerInstances(
                 (
@@ -121,16 +155,51 @@ namespace Edgegap.ServerBrowser
                     Instances._Error($"instance list next page retrieval failed\n{error}", null);
                 },
                 Instances.Current.Pagination.NextCursor,
-                Filter,
-                Order,
-                Limit
+                ListFilter,
+                ListOrder,
+                ListLimit
             );
         }
 
-        public void RefreshList()
+        public void RefreshList(string cursor = null)
         {
             Instances._Update(null, "cache deleted");
-            ListInstances(Filter, Order, Limit);
+            ListInstances(ListFilter, ListOrder, ListLimit, cursor);
+        }
+
+        public void ReserveSeats(List<string> userIDs)
+        {
+            Api.ReserveSeats(
+                new ReservationsDTO()
+                {
+                    Users = userIDs
+                        .Select(userID => new ReservationsUserDTO() { UserID = userID })
+                        .ToList(),
+                },
+                (
+                    InstanceDTO<ServerInstanceMetadata, SlotMetadata> response,
+                    UnityWebRequest request
+                ) =>
+                {
+                    Instances._Update(
+                        new InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata>()
+                        {
+                            ServerInstances = new List<
+                                InstanceDTO<ServerInstanceMetadata, SlotMetadata>
+                            >()
+                            {
+                                response,
+                            },
+                        },
+                        "instance details retrieved"
+                    );
+                    Instances._Notify("seats reserved");
+                },
+                (string error, UnityWebRequest request) =>
+                {
+                    Instances._Error($"seats reservation failed\n{error}");
+                }
+            );
         }
 
         public void ReserveSeats(string requestID, string slotName, List<string> userIDs)
@@ -167,6 +236,7 @@ namespace Edgegap.ServerBrowser
                     int index = Instances.Current.ServerInstances.FindIndex(instance =>
                         instance.RequestID == requestID
                     );
+
                     if (index == -1)
                     {
                         Instances.Current.ServerInstances.Insert(0, response);
@@ -186,39 +256,5 @@ namespace Edgegap.ServerBrowser
         }
 
         #endregion
-
-        public void Initialize(
-            UnityAction<
-                Observable<MonitorResponseDTO>,
-                ObservableActionType,
-                string
-            > onMonitorUpdate,
-            UnityAction<
-                Observable<InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata>>,
-                ObservableActionType,
-                string
-            > onInstancesUpdate
-        )
-        {
-            if (string.IsNullOrEmpty(BaseUrl.Trim()))
-            {
-                throw new Exception("BaseUrl not declared.");
-            }
-
-            if (string.IsNullOrEmpty(AuthToken.Trim()))
-            {
-                throw new Exception("AuthToken not declared.");
-            }
-
-            Api = new Api<ServerInstanceMetadata, SlotMetadata>(Handler, AuthToken, BaseUrl);
-
-            L.SubscribeLogger(Monitor, "ServerBrowser", "Monitor");
-            Monitor.Subscribe(onMonitorUpdate);
-
-            L.SubscribeLogger(Instances, "ServerBrowser", "Instances");
-            Instances.Subscribe(onInstancesUpdate);
-
-            Status();
-        }
     }
 }
