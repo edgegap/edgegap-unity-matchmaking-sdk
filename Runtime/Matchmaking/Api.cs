@@ -50,8 +50,7 @@ namespace Edgegap.Matchmaking
                         throw;
                     }
                 },
-                onErrorDelegate,
-                3
+                onErrorDelegate
             );
         }
 
@@ -79,8 +78,7 @@ namespace Edgegap.Matchmaking
                         throw;
                     }
                 },
-                onErrorDelegate,
-                3
+                onErrorDelegate
             );
         }
 

@@ -16,9 +16,14 @@
       "path": "Samples~/DeploymentAgent"
     },
     {
-      "displayName": "Server Browser - Simple Example",
-      "description": "Get started with minimal server browser example.",
-      "path": "Samples~/ServerBrowserSimple"
+      "displayName": "Server Browser - Auto-Assign",
+      "description": "Get started with auto-assigned reservations.",
+      "path": "Samples~/ServerBrowserAutoAssign"
+    },
+    {
+      "displayName": "Server Browser - Auto-Assigned",
+      "description": "Provide manual choice to players and/or customize flow with your own reservation logic.",
+      "path": "Samples~/ServerBrowserCustomSearch"
     },
     {
       "displayName": "Matchmaking - Simple Example",

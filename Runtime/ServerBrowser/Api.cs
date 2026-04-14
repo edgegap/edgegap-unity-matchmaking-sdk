@@ -57,8 +57,7 @@ namespace Edgegap.ServerBrowser
                         throw;
                     }
                 },
-                onErrorDelegate,
-                3
+                onErrorDelegate
             );
         }
 
@@ -93,8 +92,7 @@ namespace Edgegap.ServerBrowser
                         throw;
                     }
                 },
-                onErrorDelegate,
-                3
+                onErrorDelegate
             );
         }
 
@@ -142,8 +140,7 @@ namespace Edgegap.ServerBrowser
                         throw;
                     }
                 },
-                onErrorDelegate,
-                3
+                onErrorDelegate
             );
         }
 
@@ -177,8 +174,7 @@ namespace Edgegap.ServerBrowser
                         throw;
                     }
                 },
-                onErrorDelegate,
-                3
+                onErrorDelegate
             );
         }
 
@@ -214,8 +210,7 @@ namespace Edgegap.ServerBrowser
                         throw;
                     }
                 },
-                onErrorDelegate,
-                3
+                onErrorDelegate
             );
         }
 
@@ -247,8 +242,7 @@ namespace Edgegap.ServerBrowser
                         throw;
                     }
                 },
-                onErrorDelegate,
-                3
+                onErrorDelegate
             );
         }
 
@@ -265,8 +259,7 @@ namespace Edgegap.ServerBrowser
                 {
                     onSuccessDelegate(request);
                 },
-                onErrorDelegate,
-                3
+                onErrorDelegate
             );
         }
 
@@ -292,6 +285,41 @@ namespace Edgegap.ServerBrowser
                     {
                         L.Error(
                             $"Server Browser | Couldn't parse keepalive, update Edgegap SDK.\n{e.Message}"
+                        );
+                        throw;
+                    }
+                },
+                onErrorDelegate
+            );
+        }
+
+        public void ReserveSeats(
+            ReservationsDTO reservations,
+            Action<
+                InstanceDTO<ServerInstanceMetadata, SlotMetadata>,
+                UnityWebRequest
+            > onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate
+        )
+        {
+            Request.Post(
+                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{PATH_RESERVATIONS}",
+                AuthToken,
+                reservations.ToString(),
+                (string response, UnityWebRequest request) =>
+                {
+                    try
+                    {
+                        InstanceDTO<ServerInstanceMetadata, SlotMetadata> reservations =
+                            JsonConvert.DeserializeObject<
+                                InstanceDTO<ServerInstanceMetadata, SlotMetadata>
+                            >(response);
+                        onSuccessDelegate(reservations, request);
+                    }
+                    catch (Exception e)
+                    {
+                        L.Error(
+                            $"Server Browser | Couldn't parse seat reservations, update Edgegap SDK.\n{e.Message}"
                         );
                         throw;
                     }
@@ -328,8 +356,7 @@ namespace Edgegap.ServerBrowser
                         throw;
                     }
                 },
-                onErrorDelegate,
-                3
+                onErrorDelegate
             );
         }
 
@@ -360,8 +387,7 @@ namespace Edgegap.ServerBrowser
                         throw;
                     }
                 },
-                onErrorDelegate,
-                3
+                onErrorDelegate
             );
         }
     }

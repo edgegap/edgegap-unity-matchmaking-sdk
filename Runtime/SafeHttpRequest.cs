@@ -14,17 +14,11 @@ namespace Edgegap
     {
         internal MonoBehaviour Parent;
         internal int TimeoutSeconds = 3;
-        internal Func<float> BackoffSeconds = () => 1 + (0.1f * Random.value);
 
-        public SafeHttpRequest(
-            MonoBehaviour parent,
-            int timeoutSeconds = 0,
-            Func<float> backoffSeconds = null
-        )
+        public SafeHttpRequest(MonoBehaviour parent, int timeoutSeconds = 0)
         {
             Parent = parent;
             TimeoutSeconds = timeoutSeconds > 0 ? timeoutSeconds : TimeoutSeconds;
-            BackoffSeconds = backoffSeconds ?? BackoffSeconds;
         }
 
         public void Post(
@@ -33,7 +27,7 @@ namespace Edgegap
             string body,
             Action<string, UnityWebRequest> onSuccessDelegate,
             Action<string, UnityWebRequest> onErrorDelegate,
-            int requestAttemptsLeft = 3
+            RetryParameters retryParameters = null
         )
         {
 #if UNITY_2022_3_OR_NEWER
@@ -42,37 +36,15 @@ namespace Edgegap
             UnityWebRequest request = UnityWebRequest.Post(url, body);
             request.SetRequestHeader("Content-Type", "application/json");
 #endif
-            request.SetRequestHeader("Authorization", authToken);
-            request.timeout = TimeoutSeconds;
-
-            Parent.StartCoroutine(
-                _SendRequestEnumerator(
-                    request,
-                    onSuccessDelegate,
-                    (string error, UnityWebRequest req) =>
-                    {
-                        if (
-                            requestAttemptsLeft > 0
-                            && (req.responseCode == 429 || req.responseCode >= 500)
-                        )
-                        {
-                            L.Warn($"Retrying ({requestAttemptsLeft} left) POST {url}.\n{error}");
-                            Post(
-                                url,
-                                authToken,
-                                body,
-                                onSuccessDelegate,
-                                onErrorDelegate,
-                                requestAttemptsLeft - 1
-                            );
-                        }
-                        else
-                        {
-                            onErrorDelegate(error, req);
-                        }
-                    },
-                    requestAttemptsLeft > 0
-                )
+            ProcessRetryableRequest(
+                request,
+                authToken,
+                onSuccessDelegate,
+                onErrorDelegate,
+                (string error, UnityWebRequest req) =>
+                {
+                    Post(url, authToken, body, onSuccessDelegate, onErrorDelegate, retryParameters);
+                }
             );
         }
 
@@ -81,40 +53,19 @@ namespace Edgegap
             string authToken,
             Action<string, UnityWebRequest> onSuccessDelegate,
             Action<string, UnityWebRequest> onErrorDelegate,
-            int requestAttemptsLeft = 1
+            RetryParameters retryParameters = null
         )
         {
             UnityWebRequest request = UnityWebRequest.Get(url);
-            request.SetRequestHeader("Authorization", authToken);
-            request.SetRequestHeader("Content-Type", "application/json");
-            request.timeout = TimeoutSeconds;
-            Parent.StartCoroutine(
-                _SendRequestEnumerator(
-                    request,
-                    onSuccessDelegate,
-                    (string error, UnityWebRequest req) =>
-                    {
-                        if (
-                            requestAttemptsLeft > 0
-                            && (req.responseCode == 429 || req.responseCode >= 500)
-                        )
-                        {
-                            L.Warn($"Retrying ({requestAttemptsLeft} left) GET {url}.\n{error}");
-                            Get(
-                                url,
-                                authToken,
-                                onSuccessDelegate,
-                                onErrorDelegate,
-                                requestAttemptsLeft - 1
-                            );
-                        }
-                        else
-                        {
-                            onErrorDelegate(error, req);
-                        }
-                    },
-                    requestAttemptsLeft > 0
-                )
+            ProcessRetryableRequest(
+                request,
+                authToken,
+                onSuccessDelegate,
+                onErrorDelegate,
+                (string error, UnityWebRequest req) =>
+                {
+                    Get(url, authToken, onSuccessDelegate, onErrorDelegate, retryParameters);
+                }
             );
         }
 
@@ -123,40 +74,19 @@ namespace Edgegap
             string authToken,
             Action<string, UnityWebRequest> onSuccessDelegate,
             Action<string, UnityWebRequest> onErrorDelegate,
-            int requestAttemptsLeft = 3
+            RetryParameters retryParameters = null
         )
         {
             UnityWebRequest request = UnityWebRequest.Delete(url);
-            request.SetRequestHeader("Authorization", authToken);
-            request.SetRequestHeader("Content-Type", "application/json");
-            request.timeout = TimeoutSeconds;
-            Parent.StartCoroutine(
-                _SendRequestEnumerator(
-                    request,
-                    onSuccessDelegate,
-                    (string error, UnityWebRequest req) =>
-                    {
-                        if (
-                            requestAttemptsLeft > 0
-                            && (req.responseCode == 429 || req.responseCode >= 500)
-                        )
-                        {
-                            L.Warn($"Retrying ({requestAttemptsLeft} left) DELETE {url}.\n{error}");
-                            Delete(
-                                url,
-                                authToken,
-                                onSuccessDelegate,
-                                onErrorDelegate,
-                                requestAttemptsLeft - 1
-                            );
-                        }
-                        else
-                        {
-                            onErrorDelegate(error, req);
-                        }
-                    },
-                    requestAttemptsLeft > 0
-                )
+            ProcessRetryableRequest(
+                request,
+                authToken,
+                onSuccessDelegate,
+                onErrorDelegate,
+                (string error, UnityWebRequest req) =>
+                {
+                    Delete(url, authToken, onSuccessDelegate, onErrorDelegate, retryParameters);
+                }
             );
         }
 
@@ -166,14 +96,47 @@ namespace Edgegap
             string body,
             Action<string, UnityWebRequest> onSuccessDelegate,
             Action<string, UnityWebRequest> onErrorDelegate,
-            int requestAttemptsLeft = 3
+            RetryParameters retryParameters = null
         )
         {
             UnityWebRequest request = UnityWebRequest.Put(url, body);
+            // hack for Unitywebrequest not supporting PATCH
             request.method = "PATCH";
+
+            ProcessRetryableRequest(
+                request,
+                authToken,
+                onSuccessDelegate,
+                onErrorDelegate,
+                (string error, UnityWebRequest req) =>
+                {
+                    Patch(
+                        url,
+                        authToken,
+                        body,
+                        onSuccessDelegate,
+                        onErrorDelegate,
+                        retryParameters
+                    );
+                },
+                retryParameters
+            );
+        }
+
+        public void ProcessRetryableRequest(
+            UnityWebRequest request,
+            string authToken,
+            Action<string, UnityWebRequest> onSuccessDelegate,
+            Action<string, UnityWebRequest> onErrorDelegate,
+            Action<string, UnityWebRequest> onRetryableDelegate,
+            RetryParameters retryParameters = null
+        )
+        {
             request.SetRequestHeader("Authorization", authToken);
             request.SetRequestHeader("Content-Type", "application/json");
             request.timeout = TimeoutSeconds;
+            retryParameters ??= new RetryParameters();
+
             Parent.StartCoroutine(
                 _SendRequestEnumerator(
                     request,
@@ -181,25 +144,23 @@ namespace Edgegap
                     (string error, UnityWebRequest req) =>
                     {
                         if (
-                            requestAttemptsLeft > 0
+                            retryParameters.RemainingAttempts > 0
                             && (req.responseCode == 429 || req.responseCode >= 500)
                         )
                         {
-                            L.Warn($"Retrying ({requestAttemptsLeft} left) PATCH {url}.\n{error}");
-                            Delete(
-                                url,
-                                authToken,
-                                onSuccessDelegate,
-                                onErrorDelegate,
-                                requestAttemptsLeft - 1
+                            L.Warn(
+                                $"Retrying ({retryParameters.RemainingAttempts}/{retryParameters.MaxAttempts}) PATCH {request.url}.\n{error}"
                             );
+                            retryParameters.RemainingAttempts--;
+                            // todo check Retry-After header and modify backoff value if available
+                            onRetryableDelegate(error, req);
                         }
                         else
                         {
                             onErrorDelegate(error, req);
                         }
                     },
-                    requestAttemptsLeft > 0
+                    retryParameters
                 )
             );
         }
@@ -208,11 +169,17 @@ namespace Edgegap
             UnityWebRequest request,
             Action<string, UnityWebRequest> onSuccessDelegate,
             Action<string, UnityWebRequest> onErrorDelegate,
-            bool backoff = false
+            RetryParameters retryParameters = null
         )
         {
-            if (backoff)
-                yield return new WaitForSeconds(BackoffSeconds());
+            if (
+                retryParameters is not null
+                && retryParameters.RemainingAttempts < retryParameters.MaxAttempts
+            )
+            {
+                retryParameters.RemainingAttempts--;
+                yield return new WaitForSeconds(retryParameters.BackoffSeconds());
+            }
 
             yield return request.SendWebRequest();
 
@@ -231,5 +198,12 @@ namespace Edgegap
             }
             request.Dispose();
         }
+    }
+
+    public class RetryParameters
+    {
+        public uint MaxAttempts = 3;
+        public uint RemainingAttempts = 3;
+        public Func<float> BackoffSeconds = () => 1 + (0.1f * Random.value);
     }
 }
