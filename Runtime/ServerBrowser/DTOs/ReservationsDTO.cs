@@ -5,6 +5,9 @@ namespace Edgegap.ServerBrowser
 {
     public class ReservationsDTO
     {
+        [JsonProperty("policy_name")]
+        public string PolicyName;
+
         [JsonProperty("users")]
         public List<ReservationsUserDTO> Users;
 

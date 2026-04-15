@@ -167,11 +167,12 @@ namespace Edgegap.ServerBrowser
             ListInstances(ListFilter, ListOrder, ListLimit, cursor);
         }
 
-        public void ReserveSeats(List<string> userIDs)
+        public void ReserveSeats(string policyName, List<string> userIDs)
         {
             Api.ReserveSeats(
                 new ReservationsDTO()
                 {
+                    PolicyName = policyName,
                     Users = userIDs
                         .Select(userID => new ReservationsUserDTO() { UserID = userID })
                         .ToList(),
@@ -197,6 +198,7 @@ namespace Edgegap.ServerBrowser
                 },
                 (string error, UnityWebRequest request) =>
                 {
+                    // todo check 406 Not Acceptable and inform that policy is at capacity
                     Instances._Error($"seats reservation failed\n{error}");
                 }
             );

@@ -52,6 +52,7 @@ public class ServerBrowserClientHandler : MonoBehaviour
                 if (action == ObservableActionType.Update && message == "healthy")
                 {
                     ClientAgent.ReserveSeats(
+                        "on-demand", // todo replace with dynamic policy name
                         new List<string> { "player1" } // todo replace with dynamic player IDs
                     );
                 }

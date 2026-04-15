@@ -149,10 +149,22 @@ namespace Edgegap
                         )
                         {
                             L.Warn(
-                                $"Retrying ({retryParameters.RemainingAttempts}/{retryParameters.MaxAttempts}) PATCH {request.url}.\n{error}"
+                                $"Retrying ({retryParameters.RemainingAttempts}/{retryParameters.MaxAttempts}) {request.method} {request.url}.\n{error}"
                             );
                             retryParameters.RemainingAttempts--;
                             // todo check Retry-After header and modify backoff value if available
+                            L.Log(
+                                Newtonsoft.Json.JsonConvert.SerializeObject(
+                                    req.GetResponseHeaders()
+                                )
+                            );
+                            if (
+                                req.GetResponseHeaders()
+                                    .TryGetValue("Retry-After", out var retryAfter)
+                            )
+                            {
+                                retryParameters.BackoffSeconds = () => float.Parse(retryAfter);
+                            }
                             onRetryableDelegate(error, req);
                         }
                         else
