@@ -138,7 +138,7 @@ namespace Edgegap
             retryParameters ??= new RetryParameters();
 
             Parent.StartCoroutine(
-                _SendRequestEnumerator(
+                SendRequestEnumerator(
                     request,
                     onSuccessDelegate,
                     (string error, UnityWebRequest req) =>
@@ -152,7 +152,6 @@ namespace Edgegap
                                 $"Retrying ({retryParameters.RemainingAttempts}/{retryParameters.MaxAttempts}) {request.method} {request.url}.\n{error}"
                             );
                             retryParameters.RemainingAttempts--;
-                            // todo check Retry-After header and modify backoff value if available
                             L.Log(
                                 Newtonsoft.Json.JsonConvert.SerializeObject(
                                     req.GetResponseHeaders()
@@ -163,6 +162,7 @@ namespace Edgegap
                                     .TryGetValue("Retry-After", out var retryAfter)
                             )
                             {
+                                // todo check Retry-After header and modify backoff value if available
                                 retryParameters.BackoffSeconds = () => float.Parse(retryAfter);
                             }
                             onRetryableDelegate(error, req);
@@ -177,7 +177,7 @@ namespace Edgegap
             );
         }
 
-        public IEnumerator _SendRequestEnumerator(
+        public IEnumerator SendRequestEnumerator(
             UnityWebRequest request,
             Action<string, UnityWebRequest> onSuccessDelegate,
             Action<string, UnityWebRequest> onErrorDelegate,

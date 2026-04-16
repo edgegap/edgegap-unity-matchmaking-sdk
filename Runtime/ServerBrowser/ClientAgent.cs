@@ -198,8 +198,14 @@ namespace Edgegap.ServerBrowser
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    // todo check 406 Not Acceptable and inform that policy is at capacity
-                    Instances._Error($"seats reservation failed\n{error}");
+                    if (request.responseCode == 406)
+                    {
+                        Instances._Error($"seats reservation failed (not enough seats)");
+                    }
+                    else
+                    {
+                        Instances._Error($"seats reservation failed\n{error}");
+                    }
                 }
             );
         }
@@ -221,7 +227,14 @@ namespace Edgegap.ServerBrowser
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    Instances._Error($"seats reservation failed\n{error}");
+                    if (request.responseCode == 406)
+                    {
+                        Instances._Error($"seats reservation failed (not enough seats)");
+                    }
+                    else
+                    {
+                        Instances._Error($"seats reservation failed\n{error}");
+                    }
                 }
             );
         }

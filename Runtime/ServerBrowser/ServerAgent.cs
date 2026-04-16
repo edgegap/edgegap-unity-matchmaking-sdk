@@ -234,13 +234,13 @@ namespace Edgegap.ServerBrowser
 
             if (slot is null)
             {
-                Instance._Error($"slot update failed (not found)\n{update.Name}");
+                Instance._Error($"slot update failed (not found) [{update.Name}]");
                 return;
             }
 
             if (slot.AvailableSeats + update.AvailableSeats < 0)
             {
-                Instance._Error($"slot update failed (not enough seats)\n{update.Name}");
+                Instance._Error($"slot update failed (not enough seats) [{update.Name}]");
                 return;
             }
 
@@ -416,7 +416,9 @@ namespace Edgegap.ServerBrowser
                     },
                     (string error, UnityWebRequest request) =>
                     {
-                        Instance._Error($"slot update failed, enqueuing for retry\n{error}");
+                        Instance._Error(
+                            $"slot update failed, enqueuing for retry [{update.Name}]\n{error}"
+                        );
                         PendingSlotUpdates.Enqueue(update);
                         updatesFinished.Enqueue(update.Name);
                     }
