@@ -26,6 +26,8 @@ public class DeploymentAgent : MonoBehaviour
         {
             Instance = this;
         }
+
+        DontDestroyOnLoad(this.gameObject);
     }
 
     public void Start()
@@ -60,6 +62,14 @@ public class DeploymentAgent : MonoBehaviour
         L._Log(
             $"Server Handler | Started successfully for deployment '{DeploymentEnv.RequestID}'."
         );
+    }
+
+    public void OnApplicationQuit()
+    {
+        if (enabled)
+        {
+            SelfStopDeployment();
+        }
     }
 
     public void SelfStopDeployment()
