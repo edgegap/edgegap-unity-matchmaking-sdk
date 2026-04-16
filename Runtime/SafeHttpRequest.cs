@@ -41,10 +41,11 @@ namespace Edgegap
                 authToken,
                 onSuccessDelegate,
                 onErrorDelegate,
-                (string error, UnityWebRequest req) =>
+                (string error, UnityWebRequest req, RetryParameters retry) =>
                 {
-                    Post(url, authToken, body, onSuccessDelegate, onErrorDelegate, retryParameters);
-                }
+                    Post(url, authToken, body, onSuccessDelegate, onErrorDelegate, retry);
+                },
+                retryParameters
             );
         }
 
@@ -62,10 +63,11 @@ namespace Edgegap
                 authToken,
                 onSuccessDelegate,
                 onErrorDelegate,
-                (string error, UnityWebRequest req) =>
+                (string error, UnityWebRequest req, RetryParameters retry) =>
                 {
-                    Get(url, authToken, onSuccessDelegate, onErrorDelegate, retryParameters);
-                }
+                    Get(url, authToken, onSuccessDelegate, onErrorDelegate, retry);
+                },
+                retryParameters
             );
         }
 
@@ -83,10 +85,11 @@ namespace Edgegap
                 authToken,
                 onSuccessDelegate,
                 onErrorDelegate,
-                (string error, UnityWebRequest req) =>
+                (string error, UnityWebRequest req, RetryParameters retry) =>
                 {
-                    Delete(url, authToken, onSuccessDelegate, onErrorDelegate, retryParameters);
-                }
+                    Delete(url, authToken, onSuccessDelegate, onErrorDelegate, retry);
+                },
+                retryParameters
             );
         }
 
@@ -100,7 +103,7 @@ namespace Edgegap
         )
         {
             UnityWebRequest request = UnityWebRequest.Put(url, body);
-            // hack for Unitywebrequest not supporting PATCH
+            // hack for UnityWebRequest not supporting PATCH
             request.method = "PATCH";
 
             ProcessRetryableRequest(
@@ -108,16 +111,9 @@ namespace Edgegap
                 authToken,
                 onSuccessDelegate,
                 onErrorDelegate,
-                (string error, UnityWebRequest req) =>
+                (string error, UnityWebRequest req, RetryParameters retry) =>
                 {
-                    Patch(
-                        url,
-                        authToken,
-                        body,
-                        onSuccessDelegate,
-                        onErrorDelegate,
-                        retryParameters
-                    );
+                    Patch(url, authToken, body, onSuccessDelegate, onErrorDelegate, retry);
                 },
                 retryParameters
             );
@@ -128,7 +124,7 @@ namespace Edgegap
             string authToken,
             Action<string, UnityWebRequest> onSuccessDelegate,
             Action<string, UnityWebRequest> onErrorDelegate,
-            Action<string, UnityWebRequest> onRetryableDelegate,
+            Action<string, UnityWebRequest, RetryParameters> onRetryableDelegate,
             RetryParameters retryParameters = null
         )
         {
@@ -165,7 +161,7 @@ namespace Edgegap
                                 // todo check Retry-After header and modify backoff value if available
                                 retryParameters.BackoffSeconds = () => float.Parse(retryAfter);
                             }
-                            onRetryableDelegate(error, req);
+                            onRetryableDelegate(error, req, retryParameters);
                         }
                         else
                         {
@@ -189,7 +185,6 @@ namespace Edgegap
                 && retryParameters.RemainingAttempts < retryParameters.MaxAttempts
             )
             {
-                retryParameters.RemainingAttempts--;
                 yield return new WaitForSeconds(retryParameters.BackoffSeconds());
             }
 
@@ -216,6 +211,6 @@ namespace Edgegap
     {
         public uint MaxAttempts = 3;
         public uint RemainingAttempts = 3;
-        public Func<float> BackoffSeconds = () => 1 + (0.1f * Random.value);
+        public Func<float> BackoffSeconds = () => 1f + (0.1f * Random.value);
     }
 }
