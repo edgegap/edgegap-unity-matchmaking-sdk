@@ -148,16 +148,16 @@ namespace Edgegap
                                 $"Retrying ({retryParameters.RemainingAttempts}/{retryParameters.MaxAttempts}) {request.method} {request.url}.\n{error}"
                             );
                             retryParameters.RemainingAttempts--;
-                            L.Log(
-                                Newtonsoft.Json.JsonConvert.SerializeObject(
-                                    req.GetResponseHeaders()
-                                )
-                            );
                             if (
                                 req.GetResponseHeaders()
                                     .TryGetValue("Retry-After", out var retryAfter)
                             )
                             {
+                                L.Log(
+                                    Newtonsoft.Json.JsonConvert.SerializeObject(
+                                        req.GetResponseHeaders()
+                                    )
+                                );
                                 // todo check Retry-After header and modify backoff value if available
                                 retryParameters.BackoffSeconds = () => float.Parse(retryAfter);
                             }
