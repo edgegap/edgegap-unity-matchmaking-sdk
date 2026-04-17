@@ -76,16 +76,14 @@ public class MatchmakingServerAgent : MonoBehaviour
         DeploymentEnv = new DeploymentEnvironmentDTO(env);
         MatchEnv = new MatchEnvironmentDTO<MyTicketsAttributes>(env);
 
-        L._Log(
-            $"Server Handler | Started successfully for deployment '{DeploymentEnv.RequestID}'."
-        );
+        L.Log($"Server Handler | Started successfully for deployment '{DeploymentEnv.RequestID}'.");
     }
 
     public void SelfStopDeployment()
     {
         if (mockEnv)
         {
-            L._Log("Server Handler | Invoking Application.Quit() in mock environment.");
+            L.Log("Server Handler | Invoking Application.Quit() in mock environment.");
 #if UNITY_EDITOR
             EditorApplication.isPlaying = false;
 #else
@@ -99,7 +97,7 @@ public class MatchmakingServerAgent : MonoBehaviour
             || string.IsNullOrEmpty(DeploymentEnv.SelfStopToken)
         )
         {
-            L._Error("Server Handler | Self-Stop URL or Token not set, unable to self-stop.");
+            L.Error("Server Handler | Self-Stop URL or Token not set, unable to self-stop.");
             return;
         }
 
@@ -108,11 +106,11 @@ public class MatchmakingServerAgent : MonoBehaviour
             DeploymentEnv.SelfStopToken,
             (string response, UnityWebRequest request) =>
             {
-                L._Log($"Server Handler | Successfully called Self-Stop API.\n{response}");
+                L.Log($"Server Handler | Successfully called Self-Stop API.\n{response}");
             },
             (string error, UnityWebRequest request) =>
             {
-                L._Error($"Server Handler | Couldn't reach Self-Stop API.\n{error}");
+                L.Error($"Server Handler | Couldn't reach Self-Stop API.\n{error}");
             }
         );
     }
