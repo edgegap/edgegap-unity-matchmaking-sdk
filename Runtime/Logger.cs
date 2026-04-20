@@ -6,19 +6,17 @@ namespace Edgegap
     {
         public static void Log<T>(T message)
         {
-            if (!Debug.isDebugBuild)
-                return;
-            Debug.Log($"Edgegap {message}");
+            Debug.Log($"ℹ️ Edgegap {message}");
         }
 
         public static void Warn<T>(T message)
         {
-            Debug.LogWarning($"Edgegap {message}");
+            Debug.LogWarning($"⚠️ Edgegap {message}");
         }
 
         public static void Error<T>(T message)
         {
-            Debug.LogError($"Edgegap {message}");
+            Debug.LogError($"❗ Edgegap {message}");
         }
 
         public static string FormatNotifyMessage<T>(

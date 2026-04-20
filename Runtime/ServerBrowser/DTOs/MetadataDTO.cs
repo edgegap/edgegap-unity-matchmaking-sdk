@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
 
@@ -7,8 +5,10 @@ namespace Edgegap.ServerBrowser
 {
     public class MetadataDTO
     {
-        [JsonIgnore]
-        public HashSet<string> _UnsetKeys = new HashSet<string>();
+        public static JsonSerializerSettings SerializationSettings = new JsonSerializerSettings()
+        {
+            NullValueHandling = NullValueHandling.Ignore,
+        };
 
         public T Merge<T>(T other)
             where T : MetadataDTO, new()
@@ -18,19 +18,7 @@ namespace Edgegap.ServerBrowser
 
             foreach (var field in result.GetType().GetFields(flags))
             {
-                if (field.Name == "_UnsetKeys")
-                {
-                    field.SetValue(
-                        result,
-                        new HashSet<string>(
-                            other._UnsetKeys.ToList().Concat(this._UnsetKeys.ToList())
-                        )
-                    );
-                }
-                else
-                {
-                    field.SetValue(result, field.GetValue(other) ?? field.GetValue(this));
-                }
+                field.SetValue(result, field.GetValue(other) ?? field.GetValue(this));
             }
 
             return result;
@@ -38,14 +26,7 @@ namespace Edgegap.ServerBrowser
 
         public override string ToString()
         {
-            if (_UnsetKeys != null)
-            {
-                foreach (var key in _UnsetKeys)
-                {
-                    this.GetType().GetProperty(key).SetValue(this, null);
-                }
-            }
-            return JsonConvert.SerializeObject(this);
+            return JsonConvert.SerializeObject(this, SerializationSettings);
         }
     }
 

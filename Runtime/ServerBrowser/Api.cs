@@ -18,8 +18,10 @@ namespace Edgegap.ServerBrowser
 
         internal string PATH_MONITOR = "monitor";
         internal string PATH_SERVER_INSTANCES = "server-instances";
+        internal string PATH_KEEP_ALIVE = "keep-alive";
         internal string PATH_SLOTS = "slots";
         internal string PATH_RESERVATIONS = "reservations";
+        internal string PATH_CONFIRM = "confirm";
 
         public Api(
             MonoBehaviour parent,
@@ -270,7 +272,7 @@ namespace Edgegap.ServerBrowser
         )
         {
             Request.Post(
-                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}:keep-alive",
+                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}/{PATH_KEEP_ALIVE}",
                 AuthToken,
                 "",
                 (string response, UnityWebRequest request) =>
@@ -368,7 +370,7 @@ namespace Edgegap.ServerBrowser
         )
         {
             Request.Post(
-                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}/{PATH_RESERVATIONS}:confirm",
+                $"{BaseUrl}/{PATH_SERVER_INSTANCES}/{requestID}/{PATH_RESERVATIONS}/{PATH_CONFIRM}",
                 AuthToken,
                 userIDs.ToString(),
                 (string response, UnityWebRequest request) =>

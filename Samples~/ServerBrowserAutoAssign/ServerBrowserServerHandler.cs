@@ -29,13 +29,14 @@ public class ServerBrowserServerHandler : MonoBehaviour
     public float HeartbeatIntervalSeconds = 10f;
     public int HeartbeatMaxConsecutiveErrors = 10;
 
+    [Header("Environment")]
+    public bool MockEnv = false;
     public DeploymentEnvironmentDTO DeploymentEnv { get; private set; }
     public string PolicyName { get; private set; }
 
     public static ServerBrowserServerHandler Instance { get; private set; }
     private ServerAgent<MyInstanceMetadata, MySlotMetadata> ServerAgent;
     private SafeHttpRequest Request;
-    private bool MockEnv = false;
 
     public void Awake()
     {
@@ -62,7 +63,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
 #endif
 
         #region mock data
-        MockEnv = MockEnv || !string.IsNullOrEmpty(env["ARBITRIUM_MOCK_ENV"].ToString());
+        MockEnv = MockEnv || !string.IsNullOrEmpty(env["ARBITRIUM_MOCK_ENV"]?.ToString());
         if (MockEnv)
         {
             // define mock env variables here
@@ -81,6 +82,8 @@ public class ServerBrowserServerHandler : MonoBehaviour
 
         DeploymentEnv = new DeploymentEnvironmentDTO(env);
         PolicyName = env["SB_POLICY_NAME"]?.ToString() ?? "on-demand";
+        BaseUrl ??= env["SB_BASE_URL"]?.ToString();
+        ServerToken ??= env["SB_SERVER_TOKEN"]?.ToString();
 
         ServerAgent = new ServerAgent<MyInstanceMetadata, MySlotMetadata>(
             this,
@@ -171,15 +174,6 @@ public class ServerBrowserServerHandler : MonoBehaviour
         L.Log(
             $"ServerBrowser ServerHandler | Started successfully for deployment '{DeploymentEnv.RequestID}'."
         );
-    }
-
-    public IEnumerator RunTests()
-    {
-        yield return new WaitForSeconds(10f);
-        OnPlayerJoined("player1");
-        OnPlayerJoined("test-unknown");
-        yield return new WaitForSeconds(30f);
-        OnPlayerAbandoned("main");
     }
 
     public void Update()

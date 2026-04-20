@@ -160,6 +160,7 @@ namespace Edgegap.ServerBrowser
 
         public void DiscoverInstance(InstanceDTO<ServerInstanceMetadata, SlotMetadata> instance)
         {
+            L.Log(instance.ToString());
             Api.CreateServerInstance(
                 instance,
                 (
@@ -283,6 +284,7 @@ namespace Edgegap.ServerBrowser
                 Instance.Current.RequestID,
                 (KeepAliveResponseDTO keepalive, UnityWebRequest request) =>
                 {
+                    Instance._Notify($"heartbeat ok");
                     Handler.StartCoroutine(DelayedHeartbeat());
                     if (!FlushingUpdates)
                     {
@@ -297,6 +299,10 @@ namespace Edgegap.ServerBrowser
                     }
                     else
                     {
+                        Instance._Notify(
+                            $"heartbeat failed [{consecutiveErrors}/{HeartbeatMaxConsecutiveErrors}]\n{error}",
+                            ObservableActionType.Warn
+                        );
                         Handler.StartCoroutine(DelayedHeartbeat(consecutiveErrors + 1));
                     }
                 }

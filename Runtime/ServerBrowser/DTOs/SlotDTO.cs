@@ -10,7 +10,7 @@ namespace Edgegap.ServerBrowser
         public string Name;
 
         [JsonProperty("metadata")]
-        public SlotMetadata Metadata;
+        public SlotMetadata Metadata = new SlotMetadata();
 
         [JsonProperty("available_seats")]
         public uint AvailableSeats;

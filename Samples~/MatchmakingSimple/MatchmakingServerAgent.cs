@@ -41,7 +41,7 @@ public class MatchmakingServerAgent : MonoBehaviour
 #endif
 
         #region mock data
-        mockEnv = mockEnv || !string.IsNullOrEmpty(env["ARBITRIUM_MOCK_ENV"].ToString());
+        mockEnv = mockEnv || !string.IsNullOrEmpty(env["ARBITRIUM_MOCK_ENV"]?.ToString());
         if (mockEnv)
         {
             // define mock env variables here
