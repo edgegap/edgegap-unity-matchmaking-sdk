@@ -577,7 +577,11 @@ namespace Edgegap.Matchmaking
             Polling = false;
             Ticket._Update(null, "expired");
             yield return new WaitForSeconds(RemoveAssignmentSeconds);
-            Assignment._Update(null, "removed");
+
+            if (Assignment.Current is not null)
+            {
+                Assignment._Update(null, "removed");
+            }
         }
 
         internal IEnumerator _GetLatencies(
