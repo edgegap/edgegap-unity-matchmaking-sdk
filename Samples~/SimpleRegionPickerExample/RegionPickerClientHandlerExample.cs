@@ -161,7 +161,7 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
                                 {
                                     _StatusDisplay.text = "";
 
-                                    foreach (KeyValuePair<string, float> entry in pings)
+                                    foreach (KeyValuePair<string, float> entry in pings.OrderBy(key => key.Value))
                                     {
                                         GameObject btn = Instantiate(_HubBtnPrefab, _ScrollListContainer.transform);
                                         btn.GetComponent<BeaconHubButton>().SetLabel(entry.Key);
