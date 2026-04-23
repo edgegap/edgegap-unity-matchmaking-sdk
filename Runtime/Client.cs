@@ -540,6 +540,15 @@ namespace Edgegap.Matchmaking
                 }
                 return;
             }
+            else if (Assignment.Current.Status == "HOST_ASSIGNED")
+            {
+                Assignment._Update(null, "removed");
+                if (onCompletedDelegate is not null)
+                {
+                    onCompletedDelegate();
+                }
+                return;
+            }
 
             MatchmakingApi.DeleteTicketAsync(
                 Assignment.Current.ID,
@@ -629,4 +638,3 @@ namespace Edgegap.Matchmaking
         #endregion
     }
 }
-
