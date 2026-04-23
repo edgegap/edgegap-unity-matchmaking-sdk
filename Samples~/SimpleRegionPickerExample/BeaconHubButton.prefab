@@ -194,7 +194,7 @@ GameObject:
   - component: {fileID: 8445905064845457725}
   - component: {fileID: 8766588860971748472}
   m_Layer: 5
-  m_Name: CityName
+  m_Name: BtnLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -599,13 +599,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 2956946847186873484}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 844b4e45d2747d44a8e06fe22bc7c269, type: 3}
+  m_Script: {fileID: 11500000, guid: 96a9a8ddb63c6bc4faca02769d61acc0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _cityName: {fileID: 8766588860971748472}
-  _goodLatencyIcon: {fileID: 6865413214776068245}
-  _midLatencyIcon: {fileID: 1247683863869101421}
-  _poorLatencyIcon: {fileID: 653285129496949075}
+  _labelComponentName: BtnLabel
+  _goodIconComponentName: LatencyIcon/LatencyGood
+  _midIconComponentName: LatencyIcon/LatencyMid
+  _poorIconComponentName: LatencyIcon/LatencyPoor
   _goodThreshold: 50
   _midThreshold: 100
   _poorThreshold: 200

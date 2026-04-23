@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using TMPro;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
@@ -42,12 +43,16 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
 
     #region Region Picker UI
     [SerializeField]
+    private string _scrollListContainerPath = "/Canvas/Scroll View/Viewport/Content";
+
+    [SerializeField]
+    private string _statusDisplayPath = "/Canvas/StatusTxt";
+
+    [SerializeField]
+    private string _hubBtnPrefabPath = "Assets/SimpleRegionPickerExample/BeaconHubButton.prefab";
+
     private GameObject _ScrollListContainer;
-
-    [SerializeField]
     private TextMeshProUGUI _StatusDisplay;
-
-    [SerializeField]
     private GameObject _HubBtnPrefab;
     #endregion
 
@@ -62,6 +67,25 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
         else
         {
             Instance = this;
+
+            _ScrollListContainer = GameObject.Find(_scrollListContainerPath);
+            _StatusDisplay = GameObject.Find(_statusDisplayPath).GetComponent<TextMeshProUGUI>();
+            _HubBtnPrefab = (GameObject)AssetDatabase.LoadAssetAtPath(_hubBtnPrefabPath, typeof(GameObject));
+
+            if (_ScrollListContainer == null)
+            {
+                Debug.LogWarning($"Unable to find component {_scrollListContainerPath} in scene.");
+            }
+
+            if (_StatusDisplay == null)
+            {
+                Debug.LogWarning($"Unable to find component {_statusDisplayPath} in scene.");
+            }
+
+            if (_HubBtnPrefab == null)
+            {
+                Debug.LogWarning($"Unable to find prefab {_hubBtnPrefabPath} in assets.");
+            }
         }
     }
 
@@ -140,7 +164,7 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
                                     foreach (KeyValuePair<string, float> entry in pings)
                                     {
                                         GameObject btn = Instantiate(_HubBtnPrefab, _ScrollListContainer.transform);
-                                        btn.GetComponent<BeaconHubButton>().SetCityName(entry.Key);
+                                        btn.GetComponent<BeaconHubButton>().SetLabel(entry.Key);
                                         btn.GetComponent<BeaconHubButton>().SetLatencyIcon(entry.Value);
                                         btn.GetComponent<Button>().onClick.AddListener(() => OnHubBtnClick(entry.Key, entry.Value));
                                     }

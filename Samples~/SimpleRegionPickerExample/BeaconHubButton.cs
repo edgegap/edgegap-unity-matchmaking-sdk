@@ -5,16 +5,16 @@ using UnityEngine.UI;
 public class BeaconHubButton : MonoBehaviour
 {
     [SerializeField]
-    private TextMeshProUGUI _cityName;
+    private string _labelComponentPath = "BtnLabel";
 
     [SerializeField]
-    private GameObject _goodLatencyIcon;
+    private string _goodIconComponentPath = "LatencyIcon/LatencyGood";
 
     [SerializeField]
-    private GameObject _midLatencyIcon;
+    private string _midIconComponentPath = "LatencyIcon/LatencyMid";
 
     [SerializeField]
-    private GameObject _poorLatencyIcon;
+    private string _poorIconComponentPath = "LatencyIcon/LatencyPoor";
 
     [SerializeField]
     private float _goodThreshold = 50;
@@ -25,11 +25,43 @@ public class BeaconHubButton : MonoBehaviour
     [SerializeField]
     private float _poorThreshold = 200;
 
+    private TextMeshProUGUI _btnLabel;
+    private GameObject _goodLatencyIcon;
+    private GameObject _midLatencyIcon;
+    private GameObject _poorLatencyIcon;
     private float _ping;
 
-    public string GetCityName()
+    private void Awake()
     {
-        return _cityName.text;
+        _btnLabel = transform.Find(_labelComponentPath).GetComponent<TextMeshProUGUI>();
+        _goodLatencyIcon = transform.Find(_goodIconComponentPath).gameObject;
+        _midLatencyIcon = transform.Find(_midIconComponentPath).gameObject;
+        _poorLatencyIcon = transform.Find(_poorIconComponentPath).gameObject;
+
+        if (_btnLabel == null)
+        {
+            Debug.LogWarning($"Unable to find component {_labelComponentPath} in gameObject hierarchy.");
+        }
+
+        if (_goodLatencyIcon == null)
+        {
+            Debug.LogWarning($"Unable to find component {_goodIconComponentPath} in gameObject hierarchy.");
+        }
+
+        if (_midLatencyIcon == null)
+        {
+            Debug.LogWarning($"Unable to find component {_midIconComponentPath} in gameObject hierarchy.");
+        }
+
+        if (_poorLatencyIcon == null)
+        {
+            Debug.LogWarning($"Unable to find component {_poorIconComponentPath} in gameObject hierarchy.");
+        }
+    }
+
+    public string GetLabel()
+    {
+        return _btnLabel.text;
     }
 
     public float GetPing()
@@ -37,9 +69,9 @@ public class BeaconHubButton : MonoBehaviour
         return _ping;
     }
 
-    public void SetCityName(string name)
+    public void SetLabel(string txt)
     {
-        _cityName.text = name;
+        _btnLabel.text = txt;
     }
 
     public void SetLatencyIcon(float ping)

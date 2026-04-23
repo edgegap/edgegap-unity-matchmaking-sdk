@@ -1004,13 +1004,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 1748257460}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54c6ce6bd821544418b2cc031573a73b, type: 3}
+  m_Script: {fileID: 11500000, guid: cdccee10239817944bc32649fa6463f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   BaseUrl: 
   AuthToken: 
   ClientVersion: 1.0.0
-  SaveStateInPlayerPrefs: 1
+  SaveStateInPlayerPrefs: 0
   PLAYER_PREFS_KEY_VERSION: EdgegapMatchmakingClientVersion
   PLAYER_PREFS_KEY_TICKET: EdgegapMatchmakingClientTicket
   PLAYER_PREFS_KEY_ASSIGNMENT: EdgegapMatchmakingClientAssignment
@@ -1023,9 +1023,9 @@ MonoBehaviour:
   LogTicketUpdates: 1
   LogAssignmentUpdates: 1
   LogPollingUpdates: 0
-  _ScrollListContainer: {fileID: 325788293}
-  _StatusDisplay: {fileID: 887242260}
-  _HubBtnPrefab: {fileID: 2956946847186873484, guid: e7e91bc61c50e844bbd4cfa90a8124c4, type: 3}
+  _scrollListContainerPath: /Canvas/Scroll View/Viewport/Content
+  _statusDisplayPath: /Canvas/StatusTxt
+  _hubBtnPrefabPath: Assets/SimpleRegionPickerExample/BeaconHubButton.prefab
 --- !u!1 &1779040818
 GameObject:
   m_ObjectHideFlags: 0
