@@ -1,5 +1,4 @@
 using UnityEngine;
-using TMPro;
 using UnityEngine.UI;
 
 public class BeaconHubButton : MonoBehaviour
@@ -25,7 +24,7 @@ public class BeaconHubButton : MonoBehaviour
     [SerializeField]
     private float _poorThreshold = 200;
 
-    private TextMeshProUGUI _btnLabel;
+    private Text _btnLabel;
     private GameObject _goodLatencyIcon;
     private GameObject _midLatencyIcon;
     private GameObject _poorLatencyIcon;
@@ -33,7 +32,7 @@ public class BeaconHubButton : MonoBehaviour
 
     private void Awake()
     {
-        _btnLabel = transform.Find(_labelComponentPath).GetComponent<TextMeshProUGUI>();
+        _btnLabel = transform.Find(_labelComponentPath).GetComponent<Text>();
         _goodLatencyIcon = transform.Find(_goodIconComponentPath).gameObject;
         _midLatencyIcon = transform.Find(_midIconComponentPath).gameObject;
         _poorLatencyIcon = transform.Find(_poorIconComponentPath).gameObject;

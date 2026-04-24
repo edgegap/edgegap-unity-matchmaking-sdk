@@ -1,8 +1,7 @@
 using Edgegap.Matchmaking;
 using System.Collections;
 using System.Collections.Generic;
-using System.Net.NetworkInformation;
-using TMPro;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -52,7 +51,7 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
     private string _hubBtnPrefabPath = "Assets/SimpleRegionPickerExample/BeaconHubButton.prefab";
 
     private GameObject _ScrollListContainer;
-    private TextMeshProUGUI _StatusDisplay;
+    private Text _StatusDisplay;
     private GameObject _HubBtnPrefab;
     #endregion
 
@@ -69,7 +68,7 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
             Instance = this;
 
             _ScrollListContainer = GameObject.Find(_scrollListContainerPath);
-            _StatusDisplay = GameObject.Find(_statusDisplayPath).GetComponent<TextMeshProUGUI>();
+            _StatusDisplay = GameObject.Find(_statusDisplayPath).GetComponent<Text>();
             _HubBtnPrefab = (GameObject)AssetDatabase.LoadAssetAtPath(_hubBtnPrefabPath, typeof(GameObject));
 
             if (_ScrollListContainer == null)
