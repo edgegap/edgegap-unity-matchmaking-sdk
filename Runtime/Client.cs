@@ -542,6 +542,15 @@ namespace Edgegap.Matchmaking
                 }
                 return;
             }
+            else if (Assignment.Current.Status == "HOST_ASSIGNED")
+            {
+                Assignment._Update(null, "removed");
+                if (onCompletedDelegate is not null)
+                {
+                    onCompletedDelegate();
+                }
+                return;
+            }
 
             MatchmakingApi.DeleteTicketAsync(
                 Assignment.Current.ID,
@@ -570,7 +579,11 @@ namespace Edgegap.Matchmaking
             Polling = false;
             Ticket._Update(null, "expired");
             yield return new WaitForSeconds(RemoveAssignmentSeconds);
-            Assignment._Update(null, "removed");
+
+            if (Assignment.Current is not null)
+            {
+                Assignment._Update(null, "removed");
+            }
         }
 
         internal IEnumerator _GetLatencies(
