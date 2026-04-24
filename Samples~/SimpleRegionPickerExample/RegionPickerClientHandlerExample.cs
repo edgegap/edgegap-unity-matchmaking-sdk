@@ -48,7 +48,7 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
     private string _statusDisplayPath = "/Canvas/StatusTxt";
 
     [SerializeField]
-    private string _hubBtnPrefabPath = "Assets/SimpleRegionPickerExample/BeaconHubButton.prefab";
+    private string _hubBtnPrefabPath = "Assets/Samples/Edgegap Matchmaking SDK/2.1.0/Region Picker Example/BeaconHubButton.prefab";
 
     private GameObject _ScrollListContainer;
     private Text _StatusDisplay;
