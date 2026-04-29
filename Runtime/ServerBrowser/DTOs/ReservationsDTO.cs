@@ -28,6 +28,37 @@ namespace Edgegap.ServerBrowser
         }
     }
 
+    public class AutoAssignReservationsResponseDTO
+    {
+        [JsonProperty("request_id")]
+        public string RequestID;
+
+        [JsonProperty("server")]
+        public DeploymentDTO Server;
+
+        [JsonProperty("slot")]
+        public AssignedSlotDTO Slot;
+
+        [JsonProperty("users")]
+        public List<ReservationsUserDTO> Users;
+
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
+        }
+    }
+
+    public class AssignedSlotDTO
+    {
+        [JsonProperty("name")]
+        public string Name;
+
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
+        }
+    }
+
     public class ConfirmReservationsDTO
     {
         [JsonProperty("user_ids")]

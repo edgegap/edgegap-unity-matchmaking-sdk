@@ -297,10 +297,7 @@ namespace Edgegap.ServerBrowser
 
         public void ReserveSeats(
             ReservationsDTO reservations,
-            Action<
-                InstanceDTO<ServerInstanceMetadata, SlotMetadata>,
-                UnityWebRequest
-            > onSuccessDelegate,
+            Action<AutoAssignReservationsResponseDTO, UnityWebRequest> onSuccessDelegate,
             Action<string, UnityWebRequest> onErrorDelegate
         )
         {
@@ -312,10 +309,10 @@ namespace Edgegap.ServerBrowser
                 {
                     try
                     {
-                        InstanceDTO<ServerInstanceMetadata, SlotMetadata> reservations =
-                            JsonConvert.DeserializeObject<
-                                InstanceDTO<ServerInstanceMetadata, SlotMetadata>
-                            >(response);
+                        AutoAssignReservationsResponseDTO reservations =
+                            JsonConvert.DeserializeObject<AutoAssignReservationsResponseDTO>(
+                                response
+                            );
                         onSuccessDelegate(reservations, request);
                     }
                     catch (Exception e)

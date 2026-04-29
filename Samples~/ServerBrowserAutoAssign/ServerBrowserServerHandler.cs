@@ -49,12 +49,12 @@ public class ServerBrowserServerHandler : MonoBehaviour
         {
             Instance = this;
         }
-
-        DontDestroyOnLoad(this.gameObject);
     }
 
     public void Start()
     {
+        DontDestroyOnLoad(this.gameObject);
+
         Request = new SafeHttpRequest(this);
         IDictionary env = Environment.GetEnvironmentVariables();
 

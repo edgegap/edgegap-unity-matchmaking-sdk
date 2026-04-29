@@ -34,8 +34,6 @@ public class ServerBrowserClientHandler : MonoBehaviour
         {
             Instance = this;
         }
-
-        DontDestroyOnLoad(this.gameObject);
     }
 
     public void Start()

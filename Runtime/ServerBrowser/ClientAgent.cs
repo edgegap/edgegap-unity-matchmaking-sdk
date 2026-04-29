@@ -177,10 +177,7 @@ namespace Edgegap.ServerBrowser
                         .Select(userID => new ReservationsUserDTO() { UserID = userID })
                         .ToList(),
                 },
-                (
-                    InstanceDTO<ServerInstanceMetadata, SlotMetadata> response,
-                    UnityWebRequest request
-                ) =>
+                (AutoAssignReservationsResponseDTO response, UnityWebRequest request) =>
                 {
                     Instances._Update(
                         new InstanceListResponseDTO<ServerInstanceMetadata, SlotMetadata>()
@@ -189,7 +186,15 @@ namespace Edgegap.ServerBrowser
                                 InstanceDTO<ServerInstanceMetadata, SlotMetadata>
                             >()
                             {
-                                response,
+                                new InstanceDTO<ServerInstanceMetadata, SlotMetadata>()
+                                {
+                                    RequestID = response.RequestID,
+                                    Server = response.Server,
+                                    Slots = new List<SlotDTO<SlotMetadata>>()
+                                    {
+                                        new SlotDTO<SlotMetadata>() { Name = response.Slot.Name },
+                                    },
+                                },
                             },
                         },
                         "instance details retrieved"

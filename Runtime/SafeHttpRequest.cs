@@ -139,27 +139,43 @@ namespace Edgegap
                     onSuccessDelegate,
                     (string error, UnityWebRequest req) =>
                     {
+                        bool retryAfterHeader = req.GetResponseHeaders()
+                            .TryGetValue("Retry-After", out var retryAfter);
                         if (
                             retryParameters.RemainingAttempts > 0
-                            && (req.responseCode == 429 || req.responseCode >= 500)
+                            && (
+                                retryAfterHeader
+                                || req.responseCode == 429
+                                || req.responseCode >= 500
+                            )
                         )
                         {
                             L.Warn(
                                 $"Retrying ({retryParameters.RemainingAttempts}/{retryParameters.MaxAttempts}) {request.method} {request.url}.\n{error}"
                             );
                             retryParameters.RemainingAttempts--;
-                            if (
-                                req.GetResponseHeaders()
-                                    .TryGetValue("Retry-After", out var retryAfter)
-                            )
+                            if (retryAfterHeader)
                             {
-                                L.Log(
-                                    Newtonsoft.Json.JsonConvert.SerializeObject(
-                                        req.GetResponseHeaders()
-                                    )
-                                );
-                                // todo check Retry-After header and modify backoff value if available
-                                retryParameters.BackoffSeconds = () => float.Parse(retryAfter);
+                                try
+                                {
+                                    if (DateTime.TryParse(retryAfter, out var retryAfterDateTime))
+                                    {
+                                        retryParameters.BackoffSeconds = () =>
+                                            (float)
+                                                DateTime
+                                                    .Now.Subtract(retryAfterDateTime)
+                                                    .TotalSeconds + (0.1f * Random.value);
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    L.Error($"Error parsing Retry-After header: {e.Message}");
+                                }
+                            }
+                            else
+                            {
+                                retryParameters.BackoffSeconds =
+                                    RetryParameters.DefaultBackoffSeconds;
                             }
                             onRetryableDelegate(error, req, retryParameters);
                         }
@@ -211,6 +227,8 @@ namespace Edgegap
     {
         public uint MaxAttempts = 3;
         public uint RemainingAttempts = 3;
-        public Func<float> BackoffSeconds = () => 1f + (0.1f * Random.value);
+        public Func<float> BackoffSeconds = DefaultBackoffSeconds;
+
+        public static readonly Func<float> DefaultBackoffSeconds = () => 1f + (0.1f * Random.value);
     }
 }
