@@ -9,28 +9,30 @@ using UnityEngine.UI;
 using MyTicketsAttributes = Edgegap.Matchmaking.LatenciesAttributesDTO;
 using MyTicketsRequestDTO = Edgegap.Matchmaking.SimpleTicketsRequestDTO;
 
+// todo replace SimpleTicketsRequestDTO with CustomTicketsRequestDTO
+// todo replace LatenciesAttributesDTO with CustomTicketsAttributes
+
 public class RegionPickerClientHandlerExample : MonoBehaviour
 {
     public static RegionPickerClientHandlerExample Instance { get; private set; }
 
     #region Matchmaking Configuration
+
+    [Header("Matchmaker Instance")]
     public string BaseUrl;
     public string AuthToken;
 
-    public string ClientVersion = "1.0.0";
-    public bool SaveStateInPlayerPrefs = true;
-    public string PLAYER_PREFS_KEY_VERSION = "EdgegapMatchmakingClientVersion";
-    public string PLAYER_PREFS_KEY_TICKET = "EdgegapMatchmakingClientTicket";
-    public string PLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapMatchmakingClientAssignment";
-
+    [Header("Exponential Retry")]
     public int RequestTimeoutSeconds = 3;
     public float PollingBackoffSeconds = 1f;
     public int MaxConsecutivePollingErrors = 10;
 
+    [Header("Expiration and Cleanup")]
     public float RemoveAssignmentSeconds = 30f;
     public bool DeleteTicketOnPause = false;
     public bool DeleteTicketOnQuit = true;
 
+    [Header("Logging")]
     public bool LogTicketUpdates = true;
     public bool LogAssignmentUpdates = true;
     public bool LogPollingUpdates = false;
@@ -38,22 +40,19 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
 
     public Client<MyTicketsRequestDTO, MyTicketsAttributes> MatchmakingClient;
 
-    private string State;
-
     #region Region Picker UI
-    [SerializeField]
-    private string _scrollListContainerPath = "/Canvas/Scroll View/Viewport/Content";
+    public string ScrollListContainerDefaultPath = "/Canvas/Scroll View/Viewport/Content";
+    public string DisconnectButtonDefaultPath = "/Canvas/DisconnectBtn";
+    public string StatusDisplayDefaultPath = "/Canvas/StatusTxt";
+    public string HubBtnPrefabDefaultPath = "Assets/Samples/Edgegap Matchmaking SDK/2.1.0/Matchmaking - Region Picker UI/BeaconHubButton.prefab";
 
-    [SerializeField]
-    private string _statusDisplayPath = "/Canvas/StatusTxt";
-
-    [SerializeField]
-    private string _hubBtnPrefabPath = "Assets/Samples/Edgegap Matchmaking SDK/2.1.0/Region Picker Example/BeaconHubButton.prefab";
-
-    private GameObject _ScrollListContainer;
-    private Text _StatusDisplay;
-    private GameObject _HubBtnPrefab;
+    public GameObject ScrollListContainer;
+    public GameObject DisconnectButton;
+    public Text StatusDisplay;
+    public GameObject HubBtnPrefab;
     #endregion
+
+    private string State;
 
     public void Awake()
     {
@@ -67,51 +66,68 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
         {
             Instance = this;
 
-            _ScrollListContainer = GameObject.Find(_scrollListContainerPath);
-            _StatusDisplay = GameObject.Find(_statusDisplayPath).GetComponent<Text>();
-            _HubBtnPrefab = (GameObject)AssetDatabase.LoadAssetAtPath(_hubBtnPrefabPath, typeof(GameObject));
-
-            if (_ScrollListContainer == null)
+            if (ScrollListContainer == null)
             {
-                Debug.LogWarning($"Unable to find component {_scrollListContainerPath} in scene.");
+                ScrollListContainer = GameObject.Find(ScrollListContainerDefaultPath);
+
+                if (ScrollListContainer == null)
+                {
+                    Debug.LogWarning($"Unable to find component {ScrollListContainerDefaultPath} in scene.");
+                }
             }
 
-            if (_StatusDisplay == null)
+            if (DisconnectButton == null)
             {
-                Debug.LogWarning($"Unable to find component {_statusDisplayPath} in scene.");
+                DisconnectButton = GameObject.Find(DisconnectButtonDefaultPath);
+
+                if (DisconnectButton == null)
+                {
+                    Debug.LogWarning($"Unable to find component {DisconnectButtonDefaultPath} in scene.");
+                }
+                else
+                {
+                    DisconnectButton.GetComponent<Button>().onClick.AddListener(Disconnect);
+                    DisconnectButton.SetActive(false);
+                }
             }
 
-            if (_HubBtnPrefab == null)
+            if (StatusDisplay == null)
             {
-                Debug.LogWarning($"Unable to find prefab {_hubBtnPrefabPath} in assets.");
+                StatusDisplay = GameObject.Find(StatusDisplayDefaultPath).GetComponent<Text>();
+
+                if (StatusDisplay == null)
+                {
+                    Debug.LogWarning($"Unable to find component {StatusDisplayDefaultPath} in scene.");
+                }
+            }
+
+            if (HubBtnPrefab == null)
+            {
+                HubBtnPrefab = (GameObject)AssetDatabase.LoadAssetAtPath(HubBtnPrefabDefaultPath, typeof(GameObject));
+
+                if (HubBtnPrefab == null)
+                {
+                    Debug.LogWarning($"Unable to find prefab {HubBtnPrefabDefaultPath} in assets.");
+                }
             }
         }
     }
 
     public void Start()
     {
-        LoadBeacons();
-    }
-
-    public void LoadBeacons()
-    {
         // configure Matchmaking
         MatchmakingClient = new Client<MyTicketsRequestDTO, MyTicketsAttributes>(
             this,
             BaseUrl,
             AuthToken,
-            ClientVersion,
-            SaveStateInPlayerPrefs,
-            PLAYER_PREFS_KEY_VERSION,
-            PLAYER_PREFS_KEY_TICKET,
-            PLAYER_PREFS_KEY_ASSIGNMENT,
-            RequestTimeoutSeconds,
-            PollingBackoffSeconds,
-            MaxConsecutivePollingErrors,
-            RemoveAssignmentSeconds,
-            LogTicketUpdates,
-            LogAssignmentUpdates,
-            LogPollingUpdates
+            saveStateInPlayerPrefs: false,
+            requestTimeoutSeconds: RequestTimeoutSeconds,
+            pollingBackoffSeconds: PollingBackoffSeconds,
+            maxConsecutivePollingErrors: MaxConsecutivePollingErrors,
+            removeAssignmentSeconds: RemoveAssignmentSeconds,
+            logTicketUpdates: LogTicketUpdates,
+            logAssignmentUpdates: LogAssignmentUpdates,
+            logPollingUpdates: LogPollingUpdates
         );
 
         // initialize Matchmaking
@@ -147,43 +163,55 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
             {
                 if (action == ObservableActionType.Log && message.Contains("restart suggested"))
                 {
-                    _StatusDisplay.text = "Fetching beacons...";
+                    if (ScrollListContainer.transform.childCount > 0)
+                    {
+                        StatusDisplay.text = "";
 
-                    MatchmakingClient.Beacons(
-                        (BeaconsResponseDTO beacons) =>
+                        foreach (Transform child in ScrollListContainer.transform)
                         {
-                            Debug.Log($"beacons: {beacons}");
-
-                            MatchmakingClient.MeasureBeaconsRoundTripTime(
-                                beacons.Beacons,
-                                (Dictionary<string, float> pings) =>
-                                {
-                                    _StatusDisplay.text = "";
-
-                                    foreach (KeyValuePair<string, float> entry in pings.OrderBy(key => key.Value))
-                                    {
-                                        GameObject btn = Instantiate(_HubBtnPrefab, _ScrollListContainer.transform);
-                                        btn.GetComponent<BeaconHubButton>().SetLabel(entry.Key);
-                                        btn.GetComponent<BeaconHubButton>().SetLatencyIcon(entry.Value);
-                                        btn.GetComponent<Button>().onClick.AddListener(() => OnHubBtnClick(entry.Key, entry.Value));
-                                    }
-                                }   
-                            );
-                        },
-                        (string error, UnityWebRequest request) =>
-                        {
-                            // todo handle beacon downtime, create tickets without beacons?
-                            _StatusDisplay.text = "Beacon error, see logs";
-                            Debug.Log($"beacon error: {request}");
+                            child.gameObject.SetActive(true);
                         }
-                    );
+                    }
+                    else
+                    {
+                        StatusDisplay.text = "Fetching beacons...";
+
+                        MatchmakingClient.Beacons(
+                            (BeaconsResponseDTO beacons) =>
+                            {
+                                Debug.Log($"beacons: {beacons}");
+
+                                MatchmakingClient.MeasureBeaconsRoundTripTime(
+                                    beacons.Beacons,
+                                    (Dictionary<string, float> pings) =>
+                                    {
+                                        StatusDisplay.text = "";
+
+                                        foreach (KeyValuePair<string, float> entry in pings.OrderBy(key => key.Value))
+                                        {
+                                            GameObject btn = Instantiate(HubBtnPrefab, ScrollListContainer.transform);
+                                            btn.GetComponent<BeaconHubButton>().BtnLabel.text = entry.Key;
+                                            btn.GetComponent<BeaconHubButton>().SetLatencyIcon(entry.Value);
+                                            btn.GetComponent<Button>().onClick.AddListener(() => OnHubBtnClick(entry.Key, entry.Value));
+                                        }
+                                    }   
+                                );
+                            },
+                            (string error, UnityWebRequest request) =>
+                            {
+                                // todo handle beacon downtime, create tickets without beacons?
+                                StatusDisplay.text = "Beacon error, see logs";
+                                Debug.Log($"beacon error: {error}");
+                            }
+                        );
+                    }
                 }
                 else if (
                     action == ObservableActionType.Update
                     && (
                         message.Contains("received")
                         || message.Contains("updated")
-                        || message.Contains("abandoned")
+                        || message.Contains("abandon")
                     )
                 )
                 {
@@ -196,10 +224,10 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
                     && assignment.Current.Status == "MATCH_FOUND"
                 )
                 {
-                    _StatusDisplay.text = "Match found, awaiting assignment";
+                    StatusDisplay.text = "Match found, awaiting assignment";
                 }
 
-                    if (
+                if (
                     (
                         action == ObservableActionType.Update
                         && message.Contains("updated")
@@ -211,12 +239,18 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
                     )
                 )
                 {
+                    foreach (Transform child in ScrollListContainer.transform)
+                    {
+                        Destroy(child.gameObject);
+                    }
+
                     // todo join game on pre-defined game port
-                    _StatusDisplay.text = "Host assigned, joining game";
+                    StatusDisplay.text = "Host assigned, joining game";
                     Debug.Log(
                         $"joining game: {assignment.Current.Assignment.Ports["gameport"].Link}"
                     );
-                    StartCoroutine(DisconnectTimer());
+
+                    DisconnectButton.SetActive(true);
                 }
             }
         );
@@ -272,18 +306,18 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
         MyTicketsRequestDTO ticket = new(new Dictionary<string, float> { { cityName, ping } });
         MatchmakingClient.StartMatchmaking(ticket);
         
-        foreach (Transform child in _ScrollListContainer.transform)
+        foreach (Transform child in ScrollListContainer.transform)
         {
-            Destroy(child.gameObject);
+            child.gameObject.SetActive(false);
         }
 
-        _StatusDisplay.text = $"Selected region: {cityName}\nMatchmaking in progress...";
+        StatusDisplay.text = $"Selected region: {cityName}\nMatchmaking in progress...";
     }
 
-    public IEnumerator DisconnectTimer()
+    public void Disconnect()
     {
-        yield return new WaitForSeconds(10f);
-        _StatusDisplay.text = "Disconnecting from server, returning to matchmaking";
+        DisconnectButton.SetActive(false);
+        StatusDisplay.text = "Disconnecting from server, returning to matchmaking";
         Debug.Log("disconnecting from server, returning to matchmaking");
         StopMatchmaking();
     }

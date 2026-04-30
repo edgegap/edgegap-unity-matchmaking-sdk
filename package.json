@@ -16,9 +16,9 @@
             "path": "Samples~/SimpleExample"
         },
         {
-            "displayName": "Region Picker Example",
-            "description": "Basic Region Picker Matchmaking Example.",
-            "path": "Samples~/SimpleRegionPickerExample"
+            "displayName": "Matchmaking - Region Picker UI",
+            "description": "Explore UI integration with manual region selection.",
+            "path": "Samples~/MatchmakingRegionPicker"
         }
     ],
     "dependencies": {
