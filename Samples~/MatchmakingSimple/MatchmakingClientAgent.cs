@@ -8,9 +8,9 @@ using MyTicketsRequestDTO = Edgegap.Matchmaking.SimpleTicketsRequestDTO;
 
 // todo replace SimpleTicketsRequestDTO with CustomTicketsRequestDTO
 // todo replace LatenciesAttributesDTO with CustomTicketsAttributes
-public class MatchmakingClientAgent : MonoBehaviour
+public class MatchmakingClientHandler : MonoBehaviour
 {
-    public static MatchmakingClientAgent Instance { get; private set; }
+    public static MatchmakingClientHandler Instance { get; private set; }
 
     [Header("Matchmaker Instance")]
     public string BaseUrl;
@@ -21,16 +21,10 @@ public class MatchmakingClientAgent : MonoBehaviour
     public float PollingBackoffSeconds = 1f;
     public int MaxConsecutivePollingErrors = 10;
 
-    [Header("Local Caching")]
-    public bool SaveStateInPlayerPrefs = true; // toggle cache on/off
-    public string ClientVersion = ""; // changing or deleting version resets cache
+    [Header("Automatic Cleanup")]
     public float RemoveAssignmentSeconds = 30f;
     public bool DeleteTicketOnPause = false;
     public bool DeleteTicketOnQuit = true;
-
-    private string PLAYER_PREFS_KEY_VERSION = "EdgegapMatchmakingClientVersion";
-    private string PLAYER_PREFS_KEY_TICKET = "EdgegapMatchmakingClientTicket";
-    private string PLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapMatchmakingClientAssignment";
 
     [Header("Logging")]
     public bool LogTicketUpdates = true;
@@ -63,12 +57,7 @@ public class MatchmakingClientAgent : MonoBehaviour
             RequestTimeoutSeconds,
             PollingBackoffSeconds,
             MaxConsecutivePollingErrors,
-            SaveStateInPlayerPrefs,
-            ClientVersion,
             RemoveAssignmentSeconds,
-            PLAYER_PREFS_KEY_VERSION,
-            PLAYER_PREFS_KEY_TICKET,
-            PLAYER_PREFS_KEY_ASSIGNMENT,
             LogTicketUpdates,
             LogAssignmentUpdates,
             LogPollingUpdates
@@ -88,7 +77,28 @@ public class MatchmakingClientAgent : MonoBehaviour
                     if (message == "healthy")
                     {
                         // todo update UI
-                        MatchmakingClient.ResumeMatchmaking();
+
+                        MatchmakingClient.Beacons(
+                            (BeaconsResponseDTO beacons) =>
+                            {
+                                Debug.Log($"beacons: {beacons}");
+
+                                MatchmakingClient.MeasureBeaconsRoundTripTime(
+                                    beacons.Beacons,
+                                    (Dictionary<string, float> pings) =>
+                                    {
+                                        MatchmakingClient.StartMatchmaking(
+                                            new MyTicketsRequestDTO(pings)
+                                        );
+                                    }
+                                );
+                            },
+                            (string error, UnityWebRequest request) =>
+                            {
+                                // todo handle beacon downtime, create tickets without beacons?
+                                Debug.Log($"beacon error: {request}");
+                            }
+                        );
                     }
                     else if (message != "healthy")
                     {
@@ -105,31 +115,7 @@ public class MatchmakingClientAgent : MonoBehaviour
                 string message
             ) =>
             {
-                if (action == ObservableActionType.Log && message.Contains("restart suggested"))
-                {
-                    MatchmakingClient.Beacons(
-                        (BeaconsResponseDTO beacons) =>
-                        {
-                            Debug.Log($"beacons: {beacons}");
-
-                            MatchmakingClient.MeasureBeaconsRoundTripTime(
-                                beacons.Beacons,
-                                (Dictionary<string, float> pings) =>
-                                {
-                                    MatchmakingClient.StartMatchmaking(
-                                        new MyTicketsRequestDTO(pings)
-                                    );
-                                }
-                            );
-                        },
-                        (string error, UnityWebRequest request) =>
-                        {
-                            // todo handle beacon downtime, create tickets without beacons?
-                            Debug.Log($"beacon error: {request}");
-                        }
-                    );
-                }
-                else if (
+                if (
                     action == ObservableActionType.Update
                     && (
                         message.Contains("received")
@@ -142,15 +128,9 @@ public class MatchmakingClientAgent : MonoBehaviour
                 }
 
                 if (
-                    (
-                        action == ObservableActionType.Update
-                        && message.Contains("updated")
-                        && assignment.Current.Status == "HOST_ASSIGNED"
-                    )
-                    || (
-                        action == ObservableActionType.Log
-                        && message.Contains("reconnect suggested")
-                    )
+                    action == ObservableActionType.Update
+                    && message.Contains("updated")
+                    && assignment.Current.Status == "HOST_ASSIGNED"
                 )
                 {
                     // todo join game on pre-defined game port

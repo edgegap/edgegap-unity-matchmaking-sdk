@@ -8,13 +8,13 @@ using UnityEngine.Networking;
 using L = Edgegap.Logger;
 using MyTicketsAttributes = Edgegap.Matchmaking.LatenciesAttributesDTO;
 
-public class MatchmakingServerAgent : MonoBehaviour
+public class MatchmakingServerHandler : MonoBehaviour
 {
     private bool mockEnv = false;
     public DeploymentEnvironmentDTO DeploymentEnv { get; private set; }
     public MatchEnvironmentDTO<MyTicketsAttributes> MatchEnv;
 
-    public static MatchmakingServerAgent Instance { get; private set; }
+    public static MatchmakingServerHandler Instance { get; private set; }
     private SafeHttpRequest Request;
 
     public void Awake()
@@ -33,6 +33,8 @@ public class MatchmakingServerAgent : MonoBehaviour
 
     public void Start()
     {
+        DontDestroyOnLoad(this.gameObject);
+
         Request = new SafeHttpRequest(this);
         IDictionary env = Environment.GetEnvironmentVariables();
 

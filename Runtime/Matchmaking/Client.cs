@@ -27,14 +27,7 @@ namespace Edgegap.Matchmaking
         public int RequestTimeoutSeconds;
         public float PollingBackoffSeconds;
         public int MaxConsecutivePollingErrors;
-
-        public bool SaveStateInPlayerPrefs;
-        public string ClientVersion;
         public float RemoveAssignmentSeconds;
-
-        internal string PLAYER_PREFS_KEY_VERSION;
-        internal string PLAYER_PREFS_KEY_TICKET;
-        internal string PLAYER_PREFS_KEY_ASSIGNMENT;
 
         public bool LogTicketUpdates;
         public bool LogAssignmentUpdates;
@@ -54,18 +47,13 @@ namespace Edgegap.Matchmaking
             int requestTimeoutSeconds = 3,
             float pollingBackoffSeconds = 1f,
             int maxConsecutivePollingErrors = 10,
-            bool saveStateInPlayerPrefs = true,
-            string clientVersion = "1.0.0",
             float removeAssignmentSeconds = 30f,
-            string pLAYER_PREFS_KEY_VERSION = "EdgegapMatchmakingClientVersion",
-            string pLAYER_PREFS_KEY_TICKET = "EdgegapMatchmakingClientTicket",
-            string pLAYER_PREFS_KEY_ASSIGNMENT = "EdgegapMatchmakingClientAssignment",
             bool logTicketUpdates = true,
             bool logAssignmentUpdates = true,
             bool logPollingUpdates = false
         )
         {
-            if (handler is null)
+            if (handler == null)
             {
                 throw new Exception("MatchmakingClient Handler not assigned.");
             }
@@ -79,13 +67,7 @@ namespace Edgegap.Matchmaking
             PollingBackoffSeconds = pollingBackoffSeconds;
             MaxConsecutivePollingErrors = maxConsecutivePollingErrors;
 
-            SaveStateInPlayerPrefs = saveStateInPlayerPrefs;
-            ClientVersion = clientVersion;
             RemoveAssignmentSeconds = removeAssignmentSeconds;
-
-            PLAYER_PREFS_KEY_VERSION = pLAYER_PREFS_KEY_VERSION;
-            PLAYER_PREFS_KEY_TICKET = pLAYER_PREFS_KEY_TICKET;
-            PLAYER_PREFS_KEY_ASSIGNMENT = pLAYER_PREFS_KEY_ASSIGNMENT;
 
             LogTicketUpdates = logTicketUpdates;
             LogAssignmentUpdates = logAssignmentUpdates;
@@ -139,33 +121,14 @@ namespace Edgegap.Matchmaking
             int requests = 3
         )
         {
-            Handler.StartCoroutine(_GetLatencies(beacons, onCompleteDelegate, requests));
-        }
-
-        public void ResumeMatchmaking()
-        {
-            if (Assignment.Current is null)
-            {
-                Assignment._Notify("not cached, restart suggested");
-                return;
-            }
-
-            if (Assignment.Current.Status == "HOST_ASSIGNED")
-            {
-                Assignment._Notify("cached, reconnect suggested");
-                return;
-            }
-
-            Assignment._Notify("cached, resuming polling");
-            Polling = true;
-            Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
+            Handler.StartCoroutine(GetLatencies(beacons, onCompleteDelegate, requests));
         }
 
         public void StartMatchmaking(T ticket, bool abandon = false)
         {
             if (Assignment.Current is not null && !abandon)
             {
-                Assignment._Error("cached, resume or abandon");
+                Assignment._Error("conflict, resume or abandon");
                 return;
             }
 
@@ -178,7 +141,7 @@ namespace Edgegap.Matchmaking
                         Ticket._Update(ticket, "saved");
                         Assignment._Update(assignment, "received");
                         Polling = true;
-                        Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
+                        Handler.StartCoroutine(ScheduleGetAssignmentRecursively());
                     },
                     (string error, UnityWebRequest request) =>
                     {
@@ -198,7 +161,7 @@ namespace Edgegap.Matchmaking
         {
             if (Assignment.Current is not null && !abandon)
             {
-                Assignment._Error("cached, resume or abandon");
+                Assignment._Error("conflict, resume or abandon");
                 return;
             }
 
@@ -216,7 +179,7 @@ namespace Edgegap.Matchmaking
                         Assignment._Update(assignment.Tickets.Last(), "received");
                         onSuccessDelegate(assignment.Tickets.SkipLast(1).ToList(), request);
                         Polling = true;
-                        Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
+                        Handler.StartCoroutine(ScheduleGetAssignmentRecursively());
                     },
                     (string error, UnityWebRequest request) =>
                     {
@@ -231,7 +194,7 @@ namespace Edgegap.Matchmaking
         {
             if (Assignment.Current is not null && !abandon)
             {
-                Assignment._Error("cached, resume or abandon");
+                Assignment._Error("conflict, resume or abandon");
                 return;
             }
 
@@ -239,7 +202,7 @@ namespace Edgegap.Matchmaking
             {
                 Assignment._Update(assignment, "joined");
                 Polling = true;
-                Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
+                Handler.StartCoroutine(ScheduleGetAssignmentRecursively());
             });
         }
 
@@ -317,11 +280,6 @@ namespace Edgegap.Matchmaking
                 throw new Exception("AuthToken not declared.");
             }
 
-            if (SaveStateInPlayerPrefs)
-            {
-                _LoadStateFromPlayerPrefs();
-            }
-
             MatchmakingApi = new Api<T, A>(Handler, AuthToken, BaseUrl);
             Ping = new Edgegap.Ping(Handler);
 
@@ -329,110 +287,20 @@ namespace Edgegap.Matchmaking
             Monitor.Subscribe(onMonitorUpdate);
 
             L.SubscribeLogger(Ticket, "Matchmaking", "Ticket", LogTicketUpdates);
-            _SubscribePlayerPrefSave(Ticket, "Ticket", PLAYER_PREFS_KEY_TICKET);
             if (onTicketUpdate is not null)
             {
                 Ticket.Subscribe(onTicketUpdate);
             }
 
             L.SubscribeLogger(Assignment, "Matchmaking", "Assignment", LogAssignmentUpdates);
-            _SubscribePlayerPrefSave(Assignment, "Assignment", PLAYER_PREFS_KEY_ASSIGNMENT);
             Assignment.Subscribe(onAssignmentUpdate);
 
             Status();
         }
-
-        internal void _LoadStateFromPlayerPrefs()
-        {
-            string version = ClientVersion;
-            try
-            {
-                version = PlayerPrefs.GetString(PLAYER_PREFS_KEY_VERSION);
-            }
-            catch (Exception e)
-            {
-                Monitor._Error($"deserializing client version failed, cache disabled\n{e.Message}");
-            }
-
-            // skip reading ticket and assignment if version increased
-            if (
-                string.IsNullOrEmpty(ClientVersion)
-                || (!string.IsNullOrEmpty(version) && version.CompareTo(ClientVersion) > 0)
-            )
-                return;
-
-            try
-            {
-                string ticket = PlayerPrefs.GetString(PLAYER_PREFS_KEY_TICKET);
-                if (!string.IsNullOrEmpty(ticket))
-                {
-                    Ticket._Update(
-                        JsonConvert.DeserializeObject<T>(ticket),
-                        "loaded from PlayerPrefs"
-                    );
-                }
-            }
-            catch (Exception e)
-            {
-                Ticket._Error($"deserializing ticket failed, create new ticket\n{e.Message}");
-            }
-
-            try
-            {
-                string assignment = PlayerPrefs.GetString(PLAYER_PREFS_KEY_ASSIGNMENT);
-                if (assignment.Length > 0)
-                {
-                    Assignment._Update(
-                        JsonConvert.DeserializeObject<TicketResponseDTO>(assignment),
-                        "loaded from PlayerPrefs"
-                    );
-                }
-            }
-            catch (Exception e)
-            {
-                Assignment._Error(
-                    $"deserializing assignment failed, restart matchmaking\n{e.Message}"
-                );
-            }
-        }
-
-        internal void _SubscribePlayerPrefSave<O>(
-            Observable<O> observable,
-            string name,
-            string prefKey
-        )
-        {
-            observable.Subscribe(
-                (Observable<O> obs, ObservableActionType type, string message) =>
-                {
-                    if (type != ObservableActionType.Update)
-                        return;
-
-                    try
-                    {
-                        if (obs.Current is null)
-                        {
-                            PlayerPrefs.DeleteKey(prefKey);
-                        }
-                        else
-                        {
-                            PlayerPrefs.SetString(
-                                prefKey,
-                                JsonConvert.SerializeObject(obs.Current)
-                            );
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        L.Error($"Matchmaking | Serializing '{name}' failed.\n{e.Message}");
-                    }
-                }
-            );
-        }
         #endregion
 
         #region Internals
-        internal IEnumerator _ScheduleGetAssignmentRecursively(int consecutiveErrors = 0)
+        internal IEnumerator ScheduleGetAssignmentRecursively(int consecutiveErrors = 0)
         {
             if (!Polling)
             {
@@ -467,16 +335,16 @@ namespace Edgegap.Matchmaking
                             || Assignment.Current.Status == "CANCELLED"
                         )
                         {
-                            Handler.StartCoroutine(_ExpireAssignment());
+                            Handler.StartCoroutine(ExpireAssignment());
                         }
                         else
                         {
-                            Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
+                            Handler.StartCoroutine(ScheduleGetAssignmentRecursively());
                         }
                     }
                     else
                     {
-                        Handler.StartCoroutine(_ScheduleGetAssignmentRecursively());
+                        Handler.StartCoroutine(ScheduleGetAssignmentRecursively());
                     }
                 },
                 (string error, UnityWebRequest request) =>
@@ -494,7 +362,7 @@ namespace Edgegap.Matchmaking
                         if (request.responseCode == 429 || request.responseCode >= 500)
                         {
                             Handler.StartCoroutine(
-                                _ScheduleGetAssignmentRecursively(consecutiveErrors + 1)
+                                ScheduleGetAssignmentRecursively(consecutiveErrors + 1)
                             );
                         }
                         else
@@ -507,7 +375,7 @@ namespace Edgegap.Matchmaking
             );
         }
 
-        internal IEnumerator _ExpireAssignment()
+        internal IEnumerator ExpireAssignment()
         {
             Polling = false;
             Ticket._Update(null, "expired");
@@ -515,7 +383,7 @@ namespace Edgegap.Matchmaking
             Assignment._Update(null, "removed");
         }
 
-        internal IEnumerator _GetLatencies(
+        internal IEnumerator GetLatencies(
             BeaconDTO[] beacons,
             Action<Dictionary<string, float>> onCompleteDelegate,
             int requests
