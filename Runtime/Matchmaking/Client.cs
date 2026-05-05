@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
@@ -29,7 +28,6 @@ namespace Edgegap.Matchmaking
         public int MaxConsecutivePollingErrors;
         public float RemoveAssignmentSeconds;
 
-        public bool LogTicketUpdates;
         public bool LogAssignmentUpdates;
         public bool LogPollingUpdates;
 
@@ -37,7 +35,6 @@ namespace Edgegap.Matchmaking
             new Observable<MonitorResponseDTO>() { };
         public Observable<TicketResponseDTO> Assignment { get; private set; } =
             new Observable<TicketResponseDTO>() { };
-        public Observable<T> Ticket { get; private set; } = new Observable<T> { };
         private protected bool Polling = false;
 
         public Client(
@@ -48,7 +45,6 @@ namespace Edgegap.Matchmaking
             float pollingBackoffSeconds = 1f,
             int maxConsecutivePollingErrors = 10,
             float removeAssignmentSeconds = 30f,
-            bool logTicketUpdates = true,
             bool logAssignmentUpdates = true,
             bool logPollingUpdates = false
         )
@@ -69,7 +65,6 @@ namespace Edgegap.Matchmaking
 
             RemoveAssignmentSeconds = removeAssignmentSeconds;
 
-            LogTicketUpdates = logTicketUpdates;
             LogAssignmentUpdates = logAssignmentUpdates;
             LogPollingUpdates = logPollingUpdates;
         }
@@ -128,7 +123,7 @@ namespace Edgegap.Matchmaking
         {
             if (Assignment.Current is not null && !abandon)
             {
-                Assignment._Error("conflict, resume or abandon");
+                Assignment._Error("conflict, abandon and restart");
                 return;
             }
 
@@ -138,17 +133,32 @@ namespace Edgegap.Matchmaking
                     ticket,
                     (TicketResponseDTO assignment, UnityWebRequest request) =>
                     {
-                        Ticket._Update(ticket, "saved");
                         Assignment._Update(assignment, "received");
                         Polling = true;
-                        Handler.StartCoroutine(ScheduleGetAssignmentRecursively());
+                        Handler.StartCoroutine(DelayPollingAssignment());
                     },
                     (string error, UnityWebRequest request) =>
                     {
-                        Ticket._Error($"create failed\n{error}");
+                        Assignment._Error($"ticket create failed\n{error}");
                         StopMatchmaking();
                     }
                 );
+            });
+        }
+
+        public void ResumeMatchmaking(TicketResponseDTO assignment, bool abandon = false)
+        {
+            if (Assignment.Current is not null && !abandon)
+            {
+                Assignment._Error("conflict, abandon and restart");
+                return;
+            }
+
+            StopMatchmaking(() =>
+            {
+                Assignment._Update(assignment, "resumed");
+                Polling = true;
+                StartPollingAssignment();
             });
         }
 
@@ -161,7 +171,7 @@ namespace Edgegap.Matchmaking
         {
             if (Assignment.Current is not null && !abandon)
             {
-                Assignment._Error("conflict, resume or abandon");
+                Assignment._Error("conflict, abandon and restart");
                 return;
             }
 
@@ -175,15 +185,14 @@ namespace Edgegap.Matchmaking
                     groupTicket,
                     (GroupTicketsResponseDTO assignment, UnityWebRequest request) =>
                     {
-                        Ticket._Update((T)(groupTicket.Tickets.Last()), "saved");
                         Assignment._Update(assignment.Tickets.Last(), "received");
                         onSuccessDelegate(assignment.Tickets.SkipLast(1).ToList(), request);
                         Polling = true;
-                        Handler.StartCoroutine(ScheduleGetAssignmentRecursively());
+                        Handler.StartCoroutine(DelayPollingAssignment());
                     },
                     (string error, UnityWebRequest request) =>
                     {
-                        Ticket._Error($"create failed\n{error}");
+                        Assignment._Error($"ticket create failed\n{error}");
                         StopMatchmaking();
                     }
                 );
@@ -192,28 +201,15 @@ namespace Edgegap.Matchmaking
 
         public void JoinGroupMatchmaking(TicketResponseDTO assignment, bool abandon = false)
         {
-            if (Assignment.Current is not null && !abandon)
-            {
-                Assignment._Error("conflict, resume or abandon");
-                return;
-            }
-
-            StopMatchmaking(() =>
-            {
-                Assignment._Update(assignment, "joined");
-                Polling = true;
-                Handler.StartCoroutine(ScheduleGetAssignmentRecursively());
-            });
+            ResumeMatchmaking(assignment, abandon);
         }
 
         public void StopMatchmaking(Action onCompletedDelegate = null)
         {
             Polling = false;
-            Ticket._Update(null, "abandoned");
 
             if (Assignment.Current is null)
             {
-                Assignment._Update(null, "abandoned");
                 if (onCompletedDelegate is not null)
                 {
                     onCompletedDelegate();
@@ -235,11 +231,14 @@ namespace Edgegap.Matchmaking
                 {
                     if (request.responseCode == 409)
                     {
-                        Assignment._Update(null, "abandon failed (already matched), deleted cache");
+                        Assignment._Notify(
+                            "abandon failed (already matched)",
+                            ObservableActionType.Warn
+                        );
                     }
                     else if (request.responseCode == 404)
                     {
-                        Assignment._Update(null, "abandon failed (not found), deleted cache");
+                        Assignment._Update(null, "abandon failed (not found)");
                     }
                     else
                     {
@@ -286,12 +285,6 @@ namespace Edgegap.Matchmaking
             L.SubscribeLogger(Monitor, "Matchmaking", "Monitor");
             Monitor.Subscribe(onMonitorUpdate);
 
-            L.SubscribeLogger(Ticket, "Matchmaking", "Ticket", LogTicketUpdates);
-            if (onTicketUpdate is not null)
-            {
-                Ticket.Subscribe(onTicketUpdate);
-            }
-
             L.SubscribeLogger(Assignment, "Matchmaking", "Assignment", LogAssignmentUpdates);
             Assignment.Subscribe(onAssignmentUpdate);
 
@@ -300,7 +293,8 @@ namespace Edgegap.Matchmaking
         #endregion
 
         #region Internals
-        internal IEnumerator ScheduleGetAssignmentRecursively(int consecutiveErrors = 0)
+
+        internal void StartPollingAssignment(int consecutiveErrors = 0)
         {
             if (!Polling)
             {
@@ -308,15 +302,13 @@ namespace Edgegap.Matchmaking
                 {
                     Assignment._Notify("polling stopped");
                 }
-                yield break;
+                return;
             }
-
-            yield return new WaitForSeconds(PollingBackoffSeconds + (0.1f * Random.value));
 
             if (LogPollingUpdates)
             {
                 Assignment._Notify(
-                    $"polling now ({consecutiveErrors + 1}/{MaxConsecutivePollingErrors})"
+                    $"polling [{consecutiveErrors + 1}/{MaxConsecutivePollingErrors}]"
                 );
             }
 
@@ -329,7 +321,7 @@ namespace Edgegap.Matchmaking
                         && assignment.Status != Assignment.Current.Status
                     )
                     {
-                        Assignment._Update(assignment, $"updated={assignment.Status}");
+                        Assignment._Update(assignment, $"updated [{assignment.Status}]");
                         if (
                             Assignment.Current.Status == "HOST_ASSIGNED"
                             || Assignment.Current.Status == "CANCELLED"
@@ -339,21 +331,18 @@ namespace Edgegap.Matchmaking
                         }
                         else
                         {
-                            Handler.StartCoroutine(ScheduleGetAssignmentRecursively());
+                            Handler.StartCoroutine(DelayPollingAssignment());
                         }
                     }
                     else
                     {
-                        Handler.StartCoroutine(ScheduleGetAssignmentRecursively());
+                        Handler.StartCoroutine(DelayPollingAssignment());
                     }
                 },
                 (string error, UnityWebRequest request) =>
                 {
                     if (consecutiveErrors + 1 > MaxConsecutivePollingErrors)
                     {
-                        L.Error(
-                            $"Matchmaking | Reached maximum assignment polling attempts.\n{error}"
-                        );
                         Assignment._Error($"polling failed, reached maximum retries\n{error}");
                         StopMatchmaking();
                     }
@@ -361,13 +350,11 @@ namespace Edgegap.Matchmaking
                     {
                         if (request.responseCode == 429 || request.responseCode >= 500)
                         {
-                            Handler.StartCoroutine(
-                                ScheduleGetAssignmentRecursively(consecutiveErrors + 1)
-                            );
+                            Handler.StartCoroutine(DelayPollingAssignment(consecutiveErrors + 1));
                         }
                         else
                         {
-                            Assignment._Error($"polling failed, retrying\n{error}");
+                            Assignment._Error($"polling failed\n{error}");
                             StopMatchmaking();
                         }
                     }
@@ -375,10 +362,15 @@ namespace Edgegap.Matchmaking
             );
         }
 
+        internal IEnumerator DelayPollingAssignment(int consecutiveErrors = 0)
+        {
+            yield return new WaitForSeconds(PollingBackoffSeconds + (0.1f * Random.value));
+            StartPollingAssignment(consecutiveErrors);
+        }
+
         internal IEnumerator ExpireAssignment()
         {
             Polling = false;
-            Ticket._Update(null, "expired");
             yield return new WaitForSeconds(RemoveAssignmentSeconds);
             Assignment._Update(null, "removed");
         }

@@ -160,7 +160,6 @@ namespace Edgegap.ServerBrowser
 
         public void DiscoverInstance(InstanceDTO<ServerInstanceMetadata, SlotMetadata> instance)
         {
-            L.Log(instance.ToString());
             Api.CreateServerInstance(
                 instance,
                 (

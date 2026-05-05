@@ -27,7 +27,6 @@ public class MatchmakingClientHandler : MonoBehaviour
     public bool DeleteTicketOnQuit = true;
 
     [Header("Logging")]
-    public bool LogTicketUpdates = true;
     public bool LogAssignmentUpdates = true;
     public bool LogPollingUpdates = false;
 
@@ -58,7 +57,6 @@ public class MatchmakingClientHandler : MonoBehaviour
             PollingBackoffSeconds,
             MaxConsecutivePollingErrors,
             RemoveAssignmentSeconds,
-            LogTicketUpdates,
             LogAssignmentUpdates,
             LogPollingUpdates
         );
@@ -144,7 +142,7 @@ public class MatchmakingClientHandler : MonoBehaviour
 
     public void OnApplicationPause(bool pause)
     {
-        if (!DeleteTicketOnPause || MatchmakingClient.Ticket.Current is null)
+        if (!DeleteTicketOnPause || MatchmakingClient.Assignment.Current is null)
             return;
         StopMatchmaking();
     }
