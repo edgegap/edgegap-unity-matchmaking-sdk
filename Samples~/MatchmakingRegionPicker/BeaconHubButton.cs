@@ -3,66 +3,63 @@ using UnityEngine.UI;
 
 public class BeaconHubButton : MonoBehaviour
 {
-    public string LabelComponentDefaultPath = "BtnLabel";
-
-    public string GoodIconComponentDefaultPath = "LatencyIcon/LatencyGood";
-
-    public string MidIconComponentDefaultPath = "LatencyIcon/LatencyMid";
-
-    public string PoorIconComponentDefaultPath = "LatencyIcon/LatencyPoor";
-
     public float GoodThreshold = 50;
-
     public float MidThreshold = 100;
-
     public float PoorThreshold = 200;
-
     public Text BtnLabel;
     public GameObject GoodLatencyIcon;
     public GameObject MidLatencyIcon;
     public GameObject PoorLatencyIcon;
-    
+
+    private string LabelComponentDefaultPath = "BtnLabel";
+    private string GoodIconComponentDefaultPath = "LatencyIcon/LatencyGood";
+    private string MidIconComponentDefaultPath = "LatencyIcon/LatencyMid";
+    private string PoorIconComponentDefaultPath = "LatencyIcon/LatencyPoor";
     private float _ping;
 
     private void Awake()
     {
         if (BtnLabel == null)
         {
+            Debug.Log("No Button Label provided, using default.");
             BtnLabel = transform.Find(LabelComponentDefaultPath).GetComponent<Text>();
 
             if (BtnLabel == null)
             {
-                Debug.LogWarning($"Unable to find component {LabelComponentDefaultPath} in gameObject hierarchy.");
+                Debug.LogWarning($"Unable to find default component {LabelComponentDefaultPath} in gameObject hierarchy.");
             }
         }
 
         if (GoodLatencyIcon == null)
         {
+            Debug.Log("No Good Latency Icon provided, using default.");
             GoodLatencyIcon = transform.Find(GoodIconComponentDefaultPath).gameObject;
 
             if (GoodLatencyIcon == null)
             {
-                Debug.LogWarning($"Unable to find component {GoodIconComponentDefaultPath} in gameObject hierarchy.");
+                Debug.LogWarning($"Unable to find default component {GoodIconComponentDefaultPath} in gameObject hierarchy.");
             }
         }
 
         if (MidLatencyIcon == null)
         {
+            Debug.Log("No Mid Latency Icon provided, using default.");
             MidLatencyIcon = transform.Find(MidIconComponentDefaultPath).gameObject;
 
             if (MidLatencyIcon == null)
             {
-                Debug.LogWarning($"Unable to find component {MidIconComponentDefaultPath} in gameObject hierarchy.");
+                Debug.LogWarning($"Unable to find default component {MidIconComponentDefaultPath} in gameObject hierarchy.");
             }
         }
 
         if (PoorLatencyIcon == null)
         {
+            Debug.Log("No Poor Latency Icon provided, using default.");
             PoorLatencyIcon = transform.Find(PoorIconComponentDefaultPath).gameObject;
 
             if (PoorLatencyIcon == null)
             {
-                Debug.LogWarning($"Unable to find component {PoorIconComponentDefaultPath} in gameObject hierarchy.");
+                Debug.LogWarning($"Unable to find default component {PoorIconComponentDefaultPath} in gameObject hierarchy.");
             }
         }
     }
