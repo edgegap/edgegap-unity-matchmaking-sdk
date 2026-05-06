@@ -5,9 +5,9 @@
   "description": "Get started quickly with Edgegap Matchmaking and Server Browser.",
   "unity": "2021.3",
   "unityRelease": "0f1",
-  "documentationUrl": "https://docs.edgegap.com/unity/developer-tools#sdk",
+  "documentationUrl": "https://docs.edgegap.com/unity/developer-tools#software-development-kit",
   "hideInEditor": false,
-  "changelogUrl": "https://github.com/edgegap/edgegap-unity-sdk/releases",
+  "changelogUrl": "https://docs.edgegap.com/docs/release-notes",
   "licensesUrl": "https://choosealicense.com/licenses/mit/",
   "samples": [
     {
