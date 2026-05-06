@@ -1,5 +1,4 @@
 using Edgegap.Matchmaking;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -41,15 +40,14 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
     public Client<MyTicketsRequestDTO, MyTicketsAttributes> MatchmakingClient;
 
     #region Region Picker UI
-    public string ScrollListContainerDefaultPath = "/Canvas/Scroll View/Viewport/Content";
-    public string DisconnectButtonDefaultPath = "/Canvas/DisconnectBtn";
-    public string StatusDisplayDefaultPath = "/Canvas/StatusTxt";
-    public string HubBtnPrefabDefaultPath = "Assets/Samples/Edgegap Matchmaking SDK/2.1.0/Matchmaking - Region Picker UI/BeaconHubButton.prefab";
-
     public GameObject ScrollListContainer;
     public GameObject DisconnectButton;
     public Text StatusDisplay;
     public GameObject HubBtnPrefab;
+
+    private string ScrollListContainerDefaultPath = "/Canvas/Scroll View/Viewport/Content";
+    private string DisconnectButtonDefaultPath = "/Canvas/DisconnectBtn";
+    private string StatusDisplayDefaultPath = "/Canvas/StatusTxt";
     #endregion
 
     private string State;
@@ -68,21 +66,23 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
 
             if (ScrollListContainer == null)
             {
+                Debug.Log("No ScrollListContainer provided, using default.");
                 ScrollListContainer = GameObject.Find(ScrollListContainerDefaultPath);
 
                 if (ScrollListContainer == null)
                 {
-                    Debug.LogWarning($"Unable to find component {ScrollListContainerDefaultPath} in scene.");
+                    Debug.LogWarning($"Unable to find default component {ScrollListContainerDefaultPath} in scene.");
                 }
             }
 
             if (DisconnectButton == null)
             {
+                Debug.Log("No DisconnectButton provided, using default.");
                 DisconnectButton = GameObject.Find(DisconnectButtonDefaultPath);
 
                 if (DisconnectButton == null)
                 {
-                    Debug.LogWarning($"Unable to find component {DisconnectButtonDefaultPath} in scene.");
+                    Debug.LogWarning($"Unable to find default component {DisconnectButtonDefaultPath} in scene.");
                 }
                 else
                 {
@@ -93,21 +93,27 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
 
             if (StatusDisplay == null)
             {
+                Debug.Log("No StatusDisplay provided, using default.");
                 StatusDisplay = GameObject.Find(StatusDisplayDefaultPath).GetComponent<Text>();
 
                 if (StatusDisplay == null)
                 {
-                    Debug.LogWarning($"Unable to find component {StatusDisplayDefaultPath} in scene.");
+                    Debug.LogWarning($"Unable to find default component {StatusDisplayDefaultPath} in scene.");
                 }
             }
 
             if (HubBtnPrefab == null)
             {
-                HubBtnPrefab = (GameObject)AssetDatabase.LoadAssetAtPath(HubBtnPrefabDefaultPath, typeof(GameObject));
+                Debug.Log("No HubBtnPrefab provided, using default.");
+                string guid = AssetDatabase.FindAssets($"t:Script {nameof(RegionPickerClientHandlerExample)}")[0];
+                string currentAssetPath = AssetDatabase.GUIDToAssetPath(guid);
+                string hubBtnPrefabDefaultPath = currentAssetPath.Split("RegionPickerClientHandlerExample.cs")[0] + "BeaconHubButton.prefab";
+
+                HubBtnPrefab = (GameObject)AssetDatabase.LoadAssetAtPath(hubBtnPrefabDefaultPath, typeof(GameObject));
 
                 if (HubBtnPrefab == null)
                 {
-                    Debug.LogWarning($"Unable to find prefab {HubBtnPrefabDefaultPath} in assets.");
+                    Debug.LogWarning($"Unable to find default prefab {hubBtnPrefabDefaultPath} in assets.");
                 }
             }
         }
