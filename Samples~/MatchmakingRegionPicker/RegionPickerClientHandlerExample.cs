@@ -66,7 +66,7 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
 
             if (ScrollListContainer == null)
             {
-                Debug.Log("No ScrollListContainer provided, using default.");
+                Debug.Log("No Scroll List Container provided, using default.");
                 ScrollListContainer = GameObject.Find(ScrollListContainerDefaultPath);
 
                 if (ScrollListContainer == null)
@@ -77,7 +77,7 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
 
             if (DisconnectButton == null)
             {
-                Debug.Log("No DisconnectButton provided, using default.");
+                Debug.Log("No Disconnect Button provided, using default.");
                 DisconnectButton = GameObject.Find(DisconnectButtonDefaultPath);
 
                 if (DisconnectButton == null)
@@ -93,7 +93,7 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
 
             if (StatusDisplay == null)
             {
-                Debug.Log("No StatusDisplay provided, using default.");
+                Debug.Log("No Status Display provided, using default.");
                 StatusDisplay = GameObject.Find(StatusDisplayDefaultPath).GetComponent<Text>();
 
                 if (StatusDisplay == null)
@@ -104,10 +104,10 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
 
             if (HubBtnPrefab == null)
             {
-                Debug.Log("No HubBtnPrefab provided, using default.");
+                Debug.Log("No Hub Button Prefab provided, using default.");
                 string guid = AssetDatabase.FindAssets($"t:Script {nameof(RegionPickerClientHandlerExample)}")[0];
                 string currentAssetPath = AssetDatabase.GUIDToAssetPath(guid);
-                string hubBtnPrefabDefaultPath = currentAssetPath.Split("RegionPickerClientHandlerExample.cs")[0] + "BeaconHubButton.prefab";
+                string hubBtnPrefabDefaultPath = currentAssetPath.Split(nameof(RegionPickerClientHandlerExample))[0] + "BeaconHubButton.prefab";
 
                 HubBtnPrefab = (GameObject)AssetDatabase.LoadAssetAtPath(hubBtnPrefabDefaultPath, typeof(GameObject));
 
