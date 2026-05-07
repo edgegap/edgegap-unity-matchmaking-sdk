@@ -113,7 +113,8 @@ public class MatchmakingServerHandler : MonoBehaviour
             (string error, UnityWebRequest request) =>
             {
                 L.Error($"Server Handler | Couldn't reach Self-Stop API.\n{error}");
-            }
+            },
+            new RetryParameters { MaxAttempts = 10 }
         );
     }
 }

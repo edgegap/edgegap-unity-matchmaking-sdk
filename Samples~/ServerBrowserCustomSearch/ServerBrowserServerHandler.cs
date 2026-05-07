@@ -239,7 +239,8 @@ public class ServerBrowserServerHandler : MonoBehaviour
             (string error, UnityWebRequest request) =>
             {
                 L.Error($"ServerBrowser ServerHandler | Couldn't reach Self-Stop API.\n{error}");
-            }
+            },
+            new RetryParameters { MaxAttempts = 10 }
         );
     }
 }
