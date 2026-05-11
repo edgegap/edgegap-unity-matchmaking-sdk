@@ -207,6 +207,10 @@ namespace Edgegap.ServerBrowser
                     {
                         Instances._Error($"seats reservation failed (not enough seats)");
                     }
+                    else if (request.responseCode == 409)
+                    {
+                        Instances._Error($"seats reservation failed (duplicate)");
+                    }
                     else
                     {
                         Instances._Error($"seats reservation failed\n{error}");
@@ -235,6 +239,10 @@ namespace Edgegap.ServerBrowser
                     if (request.responseCode == 406)
                     {
                         Instances._Error($"seats reservation failed (not enough seats)");
+                    }
+                    else if (request.responseCode == 409)
+                    {
+                        Instances._Error($"seats reservation failed (duplicate)");
                     }
                     else
                     {
