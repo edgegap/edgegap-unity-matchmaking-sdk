@@ -10,7 +10,7 @@ using MyTicketsAttributes = Edgegap.Matchmaking.LatenciesAttributesDTO;
 
 public class MatchmakingServerHandler : MonoBehaviour
 {
-    private bool mockEnv = false;
+    private bool MockEnv = false;
     public DeploymentEnvironmentDTO DeploymentEnv { get; private set; }
     public MatchEnvironmentDTO<MyTicketsAttributes> MatchEnv;
 
@@ -39,12 +39,19 @@ public class MatchmakingServerHandler : MonoBehaviour
         IDictionary env = Environment.GetEnvironmentVariables();
 
 #if UNITY_EDITOR
-        mockEnv = true;
+        MockEnv = true;
 #endif
 
+        MockEnv = MockEnv || !string.IsNullOrEmpty(env["ARBITRIUM_MOCK_ENV"]?.ToString());
+
+        if (!MockEnv && !Application.isBatchMode)
+        {
+            L.Log("DeploymentAgent | Destroying self in client environment.");
+            Destroy(this.gameObject);
+        }
+
         #region mock data
-        mockEnv = mockEnv || !string.IsNullOrEmpty(env["ARBITRIUM_MOCK_ENV"]?.ToString());
-        if (mockEnv)
+        if (MockEnv)
         {
             // define mock env variables here
             env["ARBITRIUM_REQUEST_ID"] = "Editor";
@@ -78,14 +85,16 @@ public class MatchmakingServerHandler : MonoBehaviour
         DeploymentEnv = new DeploymentEnvironmentDTO(env);
         MatchEnv = new MatchEnvironmentDTO<MyTicketsAttributes>(env);
 
-        L.Log($"Server Handler | Started successfully for deployment '{DeploymentEnv.RequestID}'.");
+        L.Log(
+            $"MM ServerHandler | Started successfully for deployment '{DeploymentEnv.RequestID}'."
+        );
     }
 
     public void SelfStopDeployment()
     {
-        if (mockEnv)
+        if (MockEnv)
         {
-            L.Log("Server Handler | Invoking Application.Quit() in mock environment.");
+            L.Log("MM ServerHandler | Invoking Application.Quit() in mock environment.");
 #if UNITY_EDITOR
             EditorApplication.isPlaying = false;
 #else
@@ -99,7 +108,7 @@ public class MatchmakingServerHandler : MonoBehaviour
             || string.IsNullOrEmpty(DeploymentEnv.SelfStopToken)
         )
         {
-            L.Error("Server Handler | Self-Stop URL or Token not set, unable to self-stop.");
+            L.Error("MM ServerHandler | Self-Stop URL or Token not set, unable to self-stop.");
             return;
         }
 
@@ -108,11 +117,11 @@ public class MatchmakingServerHandler : MonoBehaviour
             DeploymentEnv.SelfStopToken,
             (string response, UnityWebRequest request) =>
             {
-                L.Log($"Server Handler | Successfully called Self-Stop API.\n{response}");
+                L.Log($"MM ServerHandler | Successfully called Self-Stop API.\n{response}");
             },
             (string error, UnityWebRequest request) =>
             {
-                L.Error($"Server Handler | Couldn't reach Self-Stop API.\n{error}");
+                L.Error($"MM ServerHandler | Couldn't reach Self-Stop API.\n{error}");
             },
             new RetryParameters { MaxAttempts = 10 }
         );
