@@ -131,9 +131,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
                 else if (action == ObservableActionType.Error || message == "unhealthy")
                 {
                     // todo handle outage/maintenance
-                    L.Log(
-                        $"ServerBrowser ServerHandler | Service is unhealthy.\n{monitor.Current}"
-                    );
+                    L.Log($"SB ServerHandler | Service is unhealthy.\n{monitor.Current}");
                     // SelfStopDeployment(); // optionally self-stop deployment if not discoverable
                 }
             },
@@ -172,7 +170,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
         );
 
         L.Log(
-            $"ServerBrowser ServerHandler | Started successfully for deployment '{DeploymentEnv.RequestID}'."
+            $"SB ServerHandler | Started successfully for deployment '{DeploymentEnv.RequestID}'."
         );
     }
 
@@ -207,7 +205,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
     {
         if (MockEnv)
         {
-            L.Log("ServerBrowser ServerHandler | Invoking Application.Quit() in mock environment.");
+            L.Log("SB ServerHandler | Invoking Application.Quit() in mock environment.");
 #if UNITY_EDITOR
             EditorApplication.isPlaying = false;
 #else
@@ -221,9 +219,7 @@ public class ServerBrowserServerHandler : MonoBehaviour
             || string.IsNullOrEmpty(DeploymentEnv.SelfStopToken)
         )
         {
-            L.Error(
-                "ServerBrowser ServerHandler | Self-Stop URL or Token not set, unable to self-stop."
-            );
+            L.Error("SB ServerHandler | Self-Stop URL or Token not set, unable to self-stop.");
             return;
         }
 
@@ -232,13 +228,11 @@ public class ServerBrowserServerHandler : MonoBehaviour
             DeploymentEnv.SelfStopToken,
             (string response, UnityWebRequest request) =>
             {
-                L.Log(
-                    $"ServerBrowser ServerHandler | Successfully called Self-Stop API.\n{response}"
-                );
+                L.Log($"SB ServerHandler | Successfully called Self-Stop API.\n{response}");
             },
             (string error, UnityWebRequest request) =>
             {
-                L.Error($"ServerBrowser ServerHandler | Couldn't reach Self-Stop API.\n{error}");
+                L.Error($"SB ServerHandler | Couldn't reach Self-Stop API.\n{error}");
             },
             new RetryParameters { MaxAttempts = 10 }
         );

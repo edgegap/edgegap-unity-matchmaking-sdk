@@ -282,10 +282,10 @@ namespace Edgegap.Matchmaking
             MatchmakingApi = new Api<T, A>(Handler, AuthToken, BaseUrl);
             Ping = new Edgegap.Ping(Handler);
 
-            L.SubscribeLogger(Monitor, "Matchmaking", "Monitor");
+            L.SubscribeLogger(Monitor, "MM", "Monitor");
             Monitor.Subscribe(onMonitorUpdate);
 
-            L.SubscribeLogger(Assignment, "Matchmaking", "Assignment", LogAssignmentUpdates);
+            L.SubscribeLogger(Assignment, "MM", "Assignment", LogAssignmentUpdates);
             Assignment.Subscribe(onAssignmentUpdate);
 
             Status();

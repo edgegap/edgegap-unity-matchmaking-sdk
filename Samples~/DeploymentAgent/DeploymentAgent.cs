@@ -59,8 +59,8 @@ public class DeploymentAgent : MonoBehaviour
 
         DeploymentEnv = new DeploymentEnvironmentDTO(env);
 
-        L._Log(
-            $"Server Handler | Started successfully for deployment '{DeploymentEnv.RequestID}'."
+        L.Log(
+            $"DeploymentAgent | Started successfully for deployment '{DeploymentEnv.RequestID}'."
         );
     }
 
@@ -76,7 +76,7 @@ public class DeploymentAgent : MonoBehaviour
     {
         if (mockEnv)
         {
-            L._Log("Server Handler | Invoking Application.Quit() in mock environment.");
+            L.Log("DeploymentAgent | Invoking Application.Quit() in mock environment.");
 #if UNITY_EDITOR
             EditorApplication.isPlaying = false;
 #else
@@ -90,7 +90,7 @@ public class DeploymentAgent : MonoBehaviour
             || string.IsNullOrEmpty(DeploymentEnv.SelfStopToken)
         )
         {
-            L._Error("Server Handler | Self-Stop URL or Token not set, unable to self-stop.");
+            L.Error("DeploymentAgent | Self-Stop URL or Token not set, unable to self-stop.");
             return;
         }
 
@@ -99,11 +99,11 @@ public class DeploymentAgent : MonoBehaviour
             DeploymentEnv.SelfStopToken,
             (string response, UnityWebRequest request) =>
             {
-                L._Log($"Server Handler | Successfully called Self-Stop API.\n{response}");
+                L.Log($"DeploymentAgent | Successfully called Self-Stop API.\n{response}");
             },
             (string error, UnityWebRequest request) =>
             {
-                L._Error($"Server Handler | Couldn't reach Self-Stop API.\n{error}");
+                L.Error($"DeploymentAgent | Couldn't reach Self-Stop API.\n{error}");
             },
             new RetryParameters { MaxAttempts = 10 }
         );

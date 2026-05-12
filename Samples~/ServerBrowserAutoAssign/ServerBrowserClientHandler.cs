@@ -57,9 +57,7 @@ public class ServerBrowserClientHandler : MonoBehaviour
                 else if (action == ObservableActionType.Error || message == "unhealthy")
                 {
                     // todo handle outage/maintenance
-                    L.Log(
-                        $"ServerBrowser ClientHandler | Service is unhealthy.\n{monitor.Current}"
-                    );
+                    L.Log($"SB ClientHandler | Service is unhealthy.\n{monitor.Current}");
                 }
             },
             (
@@ -73,13 +71,13 @@ public class ServerBrowserClientHandler : MonoBehaviour
                     // todo join game on pre-defined game port
                     SelectedInstance = instances.Current.ServerInstances[0];
                     L.Log(
-                        $"ServerBrowser ClientHandler | Joining game: {SelectedInstance.Server.Ports["gameport"].Link}"
+                        $"SB ClientHandler | Joining game: {SelectedInstance.Server.Ports["gameport"].Link}"
                     );
                 }
                 else if (action == ObservableActionType.Error)
                 {
                     // todo convey errors through a UI notification
-                    L.Error($"ServerBrowser ClientHandler | Unexpected error.");
+                    L.Error($"SB ClientHandler | Unexpected error.");
                 }
             }
         );

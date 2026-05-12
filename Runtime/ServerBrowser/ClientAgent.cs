@@ -73,10 +73,10 @@ namespace Edgegap.ServerBrowser
 
             Api = new Api<ServerInstanceMetadata, SlotMetadata>(Handler, AuthToken, BaseUrl);
 
-            L.SubscribeLogger(Monitor, "ServerBrowser", "Monitor");
+            L.SubscribeLogger(Monitor, "SB", "Monitor");
             Monitor.Subscribe(onMonitorUpdate);
 
-            L.SubscribeLogger(Instances, "ServerBrowser", "Instances");
+            L.SubscribeLogger(Instances, "SB", "Instances");
             Instances.Subscribe(onInstancesUpdate);
 
             Status();
@@ -203,9 +203,13 @@ namespace Edgegap.ServerBrowser
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    if (request.responseCode == 406)
+                    if (request.responseCode == 404)
                     {
-                        Instances._Error($"seats reservation failed (not enough seats)");
+                        Instances._Error($"seats reservation failed (not found)");
+                    }
+                    else if (request.responseCode == 409)
+                    {
+                        Instances._Error($"seats reservation failed (reached capacity)");
                     }
                     else if (request.responseCode == 409)
                     {
@@ -236,9 +240,13 @@ namespace Edgegap.ServerBrowser
                 },
                 (string error, UnityWebRequest request) =>
                 {
-                    if (request.responseCode == 406)
+                    if (request.responseCode == 404)
                     {
-                        Instances._Error($"seats reservation failed (not enough seats)");
+                        Instances._Error($"seats reservation failed (not found)");
+                    }
+                    else if (request.responseCode == 409)
+                    {
+                        Instances._Error($"seats reservation failed (reached capacity)");
                     }
                     else if (request.responseCode == 409)
                     {

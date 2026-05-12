@@ -112,13 +112,13 @@ namespace Edgegap.ServerBrowser
                 RequestTimeoutSeconds
             );
 
-            L.SubscribeLogger(Monitor, "ServerBrowser", "Monitor");
+            L.SubscribeLogger(Monitor, "SB", "Monitor");
             Monitor.Subscribe(onMonitorUpdate);
 
-            L.SubscribeLogger(Instance, "ServerBrowser", "Instance");
+            L.SubscribeLogger(Instance, "SB", "Instance");
             Instance.Subscribe(onInstanceUpdate);
 
-            L.SubscribeLogger(Confirmations, "ServerBrowser", "Confirmations");
+            L.SubscribeLogger(Confirmations, "SB", "Confirmations");
             if (onConfirmationsUpdate is not null)
             {
                 Confirmations.Subscribe(onConfirmationsUpdate);

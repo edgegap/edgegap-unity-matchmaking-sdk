@@ -57,7 +57,7 @@ public class ServerBrowserClientHandler : MonoBehaviour
                             {
                                 new IntFilter()
                                 {
-                                    Field = "joinable_seats",
+                                    Field = "total_joinable_seats",
                                     Operator = IntOperator._GreaterThanOrEqualTo,
                                     Value = 1,
                                 },
@@ -68,9 +68,7 @@ public class ServerBrowserClientHandler : MonoBehaviour
                 else if (action == ObservableActionType.Error || message == "unhealthy")
                 {
                     // todo handle outage/maintenance
-                    L.Log(
-                        $"ServerBrowser ClientHandler | Service is unhealthy.\n{monitor.Current}"
-                    );
+                    L.Log($"SB ClientHandler | Service is unhealthy.\n{monitor.Current}");
                 }
             },
             (
@@ -83,7 +81,7 @@ public class ServerBrowserClientHandler : MonoBehaviour
                 {
                     // todo join game on pre-defined game port
                     L.Log(
-                        $"ServerBrowser ClientHandler | Joining game: {SelectedInstance.Server.Ports["gameport"].Link}"
+                        $"SB ClientHandler | Joining game: {SelectedInstance.Server.Ports["gameport"].Link}"
                     );
                 }
                 else if (action == ObservableActionType.Update)
@@ -93,21 +91,19 @@ public class ServerBrowserClientHandler : MonoBehaviour
                         // todo store joinable instances in a list for UI selection & update UI
                         int joinableInstances = instances.Current.ServerInstances.Count;
                         L.Log(
-                            $"ServerBrowser ClientHandler | Found total '{joinableInstances}' instances with capacity."
+                            $"SB ClientHandler | Found total '{joinableInstances}' instances with capacity."
                         );
 
                         if (joinableInstances == 0)
                         {
-                            L.Log(
-                                "ServerBrowser ClientHandler | No instances with capacity found."
-                            );
+                            L.Log("SB ClientHandler | No instances with capacity found.");
                             return;
                         }
 
                         // picks first instance - alternatively select instance with a UI trigger (player choice)
                         SelectedInstance = instances.Current.ServerInstances[0];
                         L.Log(
-                            $"ServerBrowser ClientHandler | Retrieving instance details for '{SelectedInstance.RequestID}'"
+                            $"SB ClientHandler | Retrieving instance details for '{SelectedInstance.RequestID}'"
                         );
                         ClientAgent.GetInstanceDetails(SelectedInstance.RequestID);
                     }
@@ -120,13 +116,13 @@ public class ServerBrowserClientHandler : MonoBehaviour
                             instance.RequestID == SelectedInstance.RequestID
                         );
                         L.Log(
-                            $"ServerBrowser ClientHandler | Instance details retrieved for '{SelectedInstance.RequestID}'"
+                            $"SB ClientHandler | Instance details retrieved for '{SelectedInstance.RequestID}'"
                         );
                         string slotName = SelectedInstance
                             .Slots.Find(slot => slot.JoinableSeats >= 1)
                             .Name;
                         L.Log(
-                            $"ServerBrowser ClientHandler | Attempting seat reservation for instance '{SelectedInstance.RequestID}'"
+                            $"SB ClientHandler | Attempting seat reservation for instance '{SelectedInstance.RequestID}'"
                         );
                         ClientAgent.ReserveSeats(
                             SelectedInstance.RequestID,
@@ -138,7 +134,7 @@ public class ServerBrowserClientHandler : MonoBehaviour
                 else if (action == ObservableActionType.Error)
                 {
                     // todo convey errors through a UI notification
-                    L.Error($"ServerBrowser ClientHandler | Unexpected error.");
+                    L.Error($"SB ClientHandler | Unexpected error.");
                 }
             }
         );

@@ -46,7 +46,7 @@ public class MatchmakingServerHandler : MonoBehaviour
 
         if (!MockEnv && !Application.isBatchMode)
         {
-            L.Log("DeploymentAgent | Destroying self in client environment.");
+            L.Log("MM ServerHandler | Destroying self in client environment.");
             Destroy(this.gameObject);
         }
 
