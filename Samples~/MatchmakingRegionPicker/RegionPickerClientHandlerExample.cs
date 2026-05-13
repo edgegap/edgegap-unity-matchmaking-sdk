@@ -246,6 +246,16 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
                     );
 
                     DisconnectButton.SetActive(true);
+                    DisconnectButton.GetComponent<Button>().interactable = false;
+                }
+
+                if (
+                    action == ObservableActionType.Update
+                        && message.Contains("removed")
+                        && assignment.Previous?.Status == "HOST_ASSIGNED"
+                )
+                {
+                    DisconnectButton.GetComponent<Button>().interactable = true;
                 }
             }
         );

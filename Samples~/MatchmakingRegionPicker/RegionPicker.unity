@@ -845,7 +845,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 1
+  m_Interactable: 0
   m_TargetGraphic: {fileID: 584870580}
   m_OnClick:
     m_PersistentCalls:
@@ -1147,7 +1147,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1748257460}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9c93de4dec7ef5f44b472c98f9b58a9b, type: 3}
+  m_Script: {fileID: 11500000, guid: 0cd0751b64067274fb0826b87ea200e1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   BaseUrl: 
@@ -1161,11 +1161,6 @@ MonoBehaviour:
   LogTicketUpdates: 1
   LogAssignmentUpdates: 1
   LogPollingUpdates: 0
-  ScrollListContainerDefaultPath: /Canvas/Scroll View/Viewport/Content
-  DisconnectButtonDefaultPath: /Canvas/DisconnectBtn
-  StatusDisplayDefaultPath: /Canvas/StatusTxt
-  HubBtnPrefabDefaultPath: Assets/Samples/Edgegap Matchmaking SDK/2.1.0/Matchmaking
-    - Region Picker UI/BeaconHubButton.prefab
   ScrollListContainer: {fileID: 0}
   DisconnectButton: {fileID: 0}
   StatusDisplay: {fileID: 0}
