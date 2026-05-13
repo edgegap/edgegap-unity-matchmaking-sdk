@@ -21,7 +21,6 @@ public class BeaconHubButton : MonoBehaviour
     {
         if (BtnLabel == null)
         {
-            Debug.Log("No Button Label provided, using default.");
             BtnLabel = transform.Find(LabelComponentDefaultPath).GetComponent<Text>();
 
             if (BtnLabel == null)
@@ -32,7 +31,6 @@ public class BeaconHubButton : MonoBehaviour
 
         if (GoodLatencyIcon == null)
         {
-            Debug.Log("No Good Latency Icon provided, using default.");
             GoodLatencyIcon = transform.Find(GoodIconComponentDefaultPath).gameObject;
 
             if (GoodLatencyIcon == null)
@@ -43,7 +41,6 @@ public class BeaconHubButton : MonoBehaviour
 
         if (MidLatencyIcon == null)
         {
-            Debug.Log("No Mid Latency Icon provided, using default.");
             MidLatencyIcon = transform.Find(MidIconComponentDefaultPath).gameObject;
 
             if (MidLatencyIcon == null)
@@ -54,7 +51,6 @@ public class BeaconHubButton : MonoBehaviour
 
         if (PoorLatencyIcon == null)
         {
-            Debug.Log("No Poor Latency Icon provided, using default.");
             PoorLatencyIcon = transform.Find(PoorIconComponentDefaultPath).gameObject;
 
             if (PoorLatencyIcon == null)

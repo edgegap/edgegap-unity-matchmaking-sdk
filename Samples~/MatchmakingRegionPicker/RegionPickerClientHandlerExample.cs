@@ -1,3 +1,4 @@
+using Edgegap;
 using Edgegap.Matchmaking;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,8 +51,6 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
     private string StatusDisplayDefaultPath = "/Canvas/StatusTxt";
     #endregion
 
-    private string State;
-
     public void Awake()
     {
         // If there is an instance, and it's not me, delete myself.
@@ -66,23 +65,23 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
 
             if (ScrollListContainer == null)
             {
-                Debug.Log("No Scroll List Container provided, using default.");
+                Debug.Log("RP ClientHandler | No Scroll List Container provided, using default.");
                 ScrollListContainer = GameObject.Find(ScrollListContainerDefaultPath);
 
                 if (ScrollListContainer == null)
                 {
-                    Debug.LogWarning($"Unable to find default component {ScrollListContainerDefaultPath} in scene.");
+                    Debug.LogWarning($"RP ClientHandler | Unable to find default component {ScrollListContainerDefaultPath} in scene.");
                 }
             }
 
             if (DisconnectButton == null)
             {
-                Debug.Log("No Disconnect Button provided, using default.");
+                Debug.Log("RP ClientHandler | No Disconnect Button provided, using default.");
                 DisconnectButton = GameObject.Find(DisconnectButtonDefaultPath);
 
                 if (DisconnectButton == null)
                 {
-                    Debug.LogWarning($"Unable to find default component {DisconnectButtonDefaultPath} in scene.");
+                    Debug.LogWarning($"RP ClientHandler | Unable to find default component {DisconnectButtonDefaultPath} in scene.");
                 }
                 else
                 {
@@ -93,18 +92,18 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
 
             if (StatusDisplay == null)
             {
-                Debug.Log("No Status Display provided, using default.");
+                Debug.Log("RP ClientHandler | No Status Display provided, using default.");
                 StatusDisplay = GameObject.Find(StatusDisplayDefaultPath).GetComponent<Text>();
 
                 if (StatusDisplay == null)
                 {
-                    Debug.LogWarning($"Unable to find default component {StatusDisplayDefaultPath} in scene.");
+                    Debug.LogWarning($"RP ClientHandler | Unable to find default component {StatusDisplayDefaultPath} in scene.");
                 }
             }
 
             if (HubBtnPrefab == null)
             {
-                Debug.Log("No Hub Button Prefab provided, using default.");
+                Debug.Log("RP ClientHandler | No Hub Button Prefab provided, using default.");
                 string guid = AssetDatabase.FindAssets($"t:Script {nameof(RegionPickerClientHandlerExample)}")[0];
                 string currentAssetPath = AssetDatabase.GUIDToAssetPath(guid);
                 string hubBtnPrefabDefaultPath = currentAssetPath.Split(nameof(RegionPickerClientHandlerExample))[0] + "BeaconHubButton.prefab";
@@ -113,7 +112,7 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
 
                 if (HubBtnPrefab == null)
                 {
-                    Debug.LogWarning($"Unable to find default prefab {hubBtnPrefabDefaultPath} in assets.");
+                    Debug.LogWarning($"RP ClientHandler | Unable to find default prefab {hubBtnPrefabDefaultPath} in assets.");
                 }
             }
         }
@@ -126,14 +125,12 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
             this,
             BaseUrl,
             AuthToken,
-            saveStateInPlayerPrefs: false,
-            requestTimeoutSeconds: RequestTimeoutSeconds,
-            pollingBackoffSeconds: PollingBackoffSeconds,
-            maxConsecutivePollingErrors: MaxConsecutivePollingErrors,
-            removeAssignmentSeconds: RemoveAssignmentSeconds,
-            logTicketUpdates: LogTicketUpdates,
-            logAssignmentUpdates: LogAssignmentUpdates,
-            logPollingUpdates: LogPollingUpdates
+            RequestTimeoutSeconds,
+            PollingBackoffSeconds,
+            MaxConsecutivePollingErrors,
+            RemoveAssignmentSeconds,
+            LogAssignmentUpdates,
+            LogPollingUpdates
         );
 
         // initialize Matchmaking
@@ -145,30 +142,10 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
                 string message
             ) =>
             {
-                if (action == ObservableActionType.Update)
+                if (action == ObservableActionType.Update && message == "healthy")
                 {
-                    if (State is null && message == "healthy")
-                    {
-                        // todo update UI
-                        MatchmakingClient.ResumeMatchmaking();
-                    }
-                    else if (message != "healthy")
-                    {
-                        // todo handle outage/maintenance
-                        Debug.LogError($"Matchmaking error.\n{monitor.Current}");
-                        MatchmakingClient.StopMatchmaking();
-                    }
-                }
-            },
-            // handle ticket assignment
-            (
-                Observable<TicketResponseDTO> assignment,
-                ObservableActionType action,
-                string message
-            ) =>
-            {
-                if (action == ObservableActionType.Log && message.Contains("restart suggested"))
-                {
+                    // todo update UI
+
                     if (ScrollListContainer.transform.childCount > 0)
                     {
                         StatusDisplay.text = "";
@@ -185,8 +162,6 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
                         MatchmakingClient.Beacons(
                             (BeaconsResponseDTO beacons) =>
                             {
-                                Debug.Log($"beacons: {beacons}");
-
                                 MatchmakingClient.MeasureBeaconsRoundTripTime(
                                     beacons.Beacons,
                                     (Dictionary<string, float> pings) =>
@@ -200,19 +175,33 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
                                             btn.GetComponent<BeaconHubButton>().SetLatencyIcon(entry.Value);
                                             btn.GetComponent<Button>().onClick.AddListener(() => OnHubBtnClick(entry.Key, entry.Value));
                                         }
-                                    }   
+                                    }
                                 );
                             },
                             (string error, UnityWebRequest request) =>
                             {
                                 // todo handle beacon downtime, create tickets without beacons?
                                 StatusDisplay.text = "Beacon error, see logs";
-                                Debug.Log($"beacon error: {error}");
+                                Debug.Log($"RP ClientHandler |  Beacon error.\n{error}");
                             }
                         );
                     }
                 }
-                else if (
+                else if (action == ObservableActionType.Error || message == "unhealthy")
+                {
+                    // todo handle outage/maintenance
+                    Debug.LogError($"RP ClientHandler | Service is unhealthy.\n{monitor.Current}");
+                    MatchmakingClient.StopMatchmaking();
+                }
+            },
+            // handle ticket assignment
+            (
+                Observable<TicketResponseDTO> assignment,
+                ObservableActionType action,
+                string message
+            ) =>
+            {
+                if (
                     action == ObservableActionType.Update
                     && (
                         message.Contains("received")
@@ -253,7 +242,7 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
                     // todo join game on pre-defined game port
                     StatusDisplay.text = "Host assigned, joining game";
                     Debug.Log(
-                        $"joining game: {assignment.Current.Assignment.Ports["gameport"].Link}"
+                        $"RP ClientHandler | Joining game: {assignment.Current.Assignment.Ports["gameport"].Link}"
                     );
 
                     DisconnectButton.SetActive(true);
@@ -264,7 +253,7 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
 
     public void OnApplicationPause(bool pause)
     {
-        if (!DeleteTicketOnPause || MatchmakingClient.Ticket.Current is null)
+        if (!DeleteTicketOnPause || MatchmakingClient.Assignment.Current is null)
             return;
         StopMatchmaking();
     }
@@ -294,7 +283,7 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
             (List<TicketResponseDTO> memberAssignments, UnityWebRequest request) =>
             {
                 // todo send assignment IDs to group members to track their tickets
-                Debug.Log($"member assignemnts: {memberAssignments}");
+                Debug.Log($"RP ClientHandler | Member assignemnts: {memberAssignments}");
             },
             abandon
         );
@@ -308,10 +297,9 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
 
     public void OnHubBtnClick(string cityName, float ping)
     {
-        Debug.Log($"selected region: {cityName} - {ping}");
         MyTicketsRequestDTO ticket = new(new Dictionary<string, float> { { cityName, ping } });
         MatchmakingClient.StartMatchmaking(ticket);
-        
+
         foreach (Transform child in ScrollListContainer.transform)
         {
             child.gameObject.SetActive(false);
@@ -324,7 +312,7 @@ public class RegionPickerClientHandlerExample : MonoBehaviour
     {
         DisconnectButton.SetActive(false);
         StatusDisplay.text = "Disconnecting from server, returning to matchmaking";
-        Debug.Log("disconnecting from server, returning to matchmaking");
+        Debug.Log("RP ClientHandler | Disconnecting from server, returning to matchmaking.");
         StopMatchmaking();
     }
 }
